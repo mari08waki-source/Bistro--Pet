@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bistro Pet - Plano Semanal</title>
+    <link rel="stylesheet" href="./styles.css?v=session4-weekly-plan" />
+  </head>
+  <body class="session-three-body">
+    <main class="meal-session bistro-generator">
+      <section class="chef-pet-card">
+        <img src="./session-3-chef-akita.png" alt="Akita chef do Bistro Pet" />
+        <div>
+          <strong>Luna</strong>
+          <span>Menu preparado pelo Bistro</span>
+        </div>
+      </section>
+
+      <section class="bistro-menu weekly-heading">
+        <p class="meal-eyebrow">Menu Bistro</p>
+        <h1>O chef vai organizar a semana da Luna.</h1>
+      </section>
+
+      <section class="weekly-planner" id="weeklyPlanner">
+        <div class="weekly-controls">
+          <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyAuto" checked />
+          <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyCustom" />
+
+          <div class="kitchen-switches" aria-label="Modos do plano semanal">
+            <label class="kitchen-switch" for="weeklyAuto">
+              <span>Modo Automático</span>
+              <i aria-hidden="true"></i>
+            </label>
+            <label class="kitchen-switch" for="weeklyCustom">
+              <span>Modo Personalizado</span>
+              <i aria-hidden="true"></i>
+            </label>
+          </div>
+
+          <div class="weekly-ingredients">
+            <span>Ingredientes</span>
+            <small>Escolha bases especiais para o plano da semana.</small>
+            <div class="ingredient-chips" id="weeklyChips">
+              <button class="ingredient-chip active" type="button">Frango</button>
+              <button class="ingredient-chip active" type="button">Arroz</button>
+              <button class="ingredient-chip" type="button">Batata</button>
+              <button class="ingredient-chip active" type="button">Abóbora</button>
+              <button class="ingredient-chip" type="button">Peixe</button>
+              <button class="ingredient-chip add-chip" type="button">Adicionar ingrediente</button>
+            </div>
+          </div>
+
+          <button class="primary full create-week-plan" type="button" id="createWeekPlan">✨ Criar plano do chef</button>
+        </div>
+
+        <div class="weekly-kitchen-stage">
+          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha premium do Bistro Pet preparando o plano semanal" />
+          <div class="frosted-message weekly-empty-message">
+            <span>Bistro em preparo</span>
+            <p>O chef está organizando a próxima semana</p>
+          </div>
+
+          <div class="weekly-result-card" id="weeklyResultCard">
+            <span class="recipe-note">Semana criada pelo Bistro</span>
+            <h2>Plano delicado da Luna</h2>
+            <div class="weekly-days" id="weeklyDays"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const weeklyPlanner = document.getElementById("weeklyPlanner");
+      const weeklyDays = document.getElementById("weeklyDays");
+      const weeklyChips = [...document.querySelectorAll("#weeklyChips .ingredient-chip:not(.add-chip)")];
+
+      const automaticPlan = [
+        ["Segunda", "Frango suave com arroz", "./session-3-meal-hero.png"],
+        ["Terça", "Abóbora cremosa e ovos", "./session-3-meal-alt.png"],
+        ["Quarta", "Peixe delicado com batata", "./session-3-meal-alt.png"],
+        ["Quinta", "Arroz morno com frango", "./session-3-meal-hero.png"],
+        ["Sexta", "Bowl leve de cenoura", "./session-3-meal-alt.png"],
+        ["Sábado", "Frango com abóbora macia", "./session-3-meal-hero.png"],
+        ["Domingo", "Combinação aconchegante", "./session-3-meal-hero.png"]
+      ];
+
+      weeklyChips.forEach(chip => chip.addEventListener("click", () => chip.classList.toggle("active")));
+
+      function createDayCard(day, title, image) {
+        return `
+          <article class="week-day-card">
+            <img src="${image}" alt="${title}" />
+            <div>
+              <strong>${day}</strong>
+              <span>${title}</span>
+            </div>
+          </article>
+        `;
+      }
+
+      function generateWeeklyPlan() {
+        const selected = weeklyChips
+          .filter(chip => chip.classList.contains("active"))
+          .map(chip => chip.textContent.trim());
+
+        const plan = automaticPlan.map((item, index) => {
+          if (selected.length < 2) return item;
+          const base = selected[index % selected.length];
+          const pair = selected[(index + 1) % selected.length];
+          return [item[0], `${base} com ${pair.toLowerCase()}`, item[2]];
+        });
+
+        weeklyDays.innerHTML = plan.map(item => createDayCard(item[0], item[1], item[2])).join("");
+        weeklyPlanner.classList.add("is-generated");
+      }
+
+      document.getElementById("createWeekPlan").addEventListener("click", generateWeeklyPlan);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bistro Pet - Perfil do Pet</title>
+    <link rel="stylesheet" href="./styles.css?v=session2-profile" />
+  </head>
+  <body class="session-two-body">
+    <main class="profile-session">
+      <section class="profile-hero">
+        <img src="./session-2-pet-profile-hero.png" alt="Cuidado premium e afetivo com pet em rotina elegante" />
+        <div class="profile-hero-shade"></div>
+        <div class="profile-hero-copy">
+          <div class="brand-button profile-brand">
+            Bistro Pet
+            <span>perfil do pet</span>
+          </div>
+          <p>Um cuidado mais íntimo começa conhecendo os pequenos detalhes.</p>
+        </div>
+      </section>
+
+      <section class="profile-content">
+        <div class="profile-title">
+          <span>Perfil afetivo</span>
+          <h1>Conhecer para cuidar melhor.</h1>
+        </div>
+
+        <form class="pet-profile-card">
+          <label>
+            Nome do pet
+            <input value="Luna" />
+          </label>
+          <label>
+            Nome do tutor
+            <input value="Marina" />
+          </label>
+          <div class="field-row">
+            <label>
+              Idade
+              <input value="7 anos" />
+            </label>
+            <label>
+              Peso
+              <input value="12 kg" />
+            </label>
+          </div>
+          <label>
+            Raça
+            <input value="Akita Inu" />
+          </label>
+          <section class="menu-style" aria-label="Estilo do cardápio">
+            <span class="menu-style-title">Estilo do cardápio</span>
+            <input class="mode-radio" type="radio" name="menu-style" id="freeProfile" checked />
+            <input class="mode-radio" type="radio" name="menu-style" id="customProfile" />
+            <div class="mode-options">
+              <label class="mode-option" for="freeProfile">
+                <span>
+                  <strong>Perfil Livre</strong>
+                  <small>Para pets sem preferências específicas.</small>
+                </span>
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+              <label class="mode-option" for="customProfile">
+                <span>
+                  <strong>Perfil Personalizado</strong>
+                  <small>Quando existe algum cuidado ou preferência especial.</small>
+                </span>
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+            </div>
+            <div class="custom-note">
+              <label>
+                Detalhes para o chef
+                <textarea>Prefere frango. Come melhor à noite.</textarea>
+              </label>
+            </div>
+          </section>
+          <label>
+            Preferências
+            <textarea>Gosta de arroz. Prefere refeições mornas. Ama frango.</textarea>
+          </label>
+          <button class="primary full" type="button">Salvar perfil</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

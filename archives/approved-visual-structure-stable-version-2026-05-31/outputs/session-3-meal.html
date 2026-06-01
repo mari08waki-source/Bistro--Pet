@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bistro Pet - Gerador de Receitas</title>
+    <link rel="stylesheet" href="./styles.css?v=session3-bistro-generator-fixed-width" />
+  </head>
+  <body class="session-three-body">
+    <main class="meal-session bistro-generator">
+      <section class="chef-pet-card">
+        <img src="./session-3-chef-akita.png" alt="Akita chef do Bistro Pet" />
+        <div>
+          <strong>Luna</strong>
+          <span>Menu preparado pelo Bistro</span>
+        </div>
+      </section>
+
+      <section class="bistro-menu">
+        <p class="meal-eyebrow">Menu do Bistro</p>
+        <h1>Hoje vamos criar algo especial para Luna.</h1>
+
+        <div class="recipe-modes" aria-label="Modo de receita">
+          <button class="mode-pill" type="button" data-mode="livre">
+            Receita livre
+          </button>
+          <button class="mode-pill active" type="button" data-mode="personalizada">
+            Personalizada
+          </button>
+          <button class="mode-pill" type="button" data-mode="chef">
+            Sugestão do chef
+          </button>
+        </div>
+      </section>
+
+      <section class="intelligent-kitchen" id="intelligentKitchen">
+        <div class="generator-modes">
+          <input class="kitchen-mode-input" type="radio" name="kitchen-mode" id="manualMode" />
+          <input class="kitchen-mode-input" type="radio" name="kitchen-mode" id="autoMode" checked />
+          <input class="kitchen-mode-input" type="radio" name="kitchen-mode" id="customMode" />
+
+          <div class="kitchen-switches" aria-label="Modos inteligentes de receita">
+            <label class="kitchen-switch" for="manualMode">
+              <span>Modo Manual</span>
+              <i aria-hidden="true"></i>
+            </label>
+            <label class="kitchen-switch" for="autoMode">
+              <span>Modo Automático</span>
+              <i aria-hidden="true"></i>
+            </label>
+            <label class="kitchen-switch" for="customMode">
+              <span>Modo Personalizado</span>
+              <i aria-hidden="true"></i>
+            </label>
+          </div>
+
+          <div class="kitchen-ingredients">
+            <span>Ingredientes</span>
+            <small>Escolha o que o chef pode usar hoje.</small>
+            <div class="ingredient-chips" id="ingredientChips">
+              <button class="ingredient-chip active" type="button">Frango</button>
+              <button class="ingredient-chip active" type="button">Arroz</button>
+              <button class="ingredient-chip" type="button">Batata</button>
+              <button class="ingredient-chip active" type="button">Abóbora</button>
+              <button class="ingredient-chip" type="button">Peixe</button>
+              <button class="ingredient-chip add-chip" type="button">Adicionar ingrediente</button>
+            </div>
+          </div>
+
+          <button class="primary full create-chef-recipe" type="button" id="createRecipe">Criar receita do chef</button>
+        </div>
+
+        <div class="sleeping-kitchen">
+          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha premium do Bistro aguardando criação" />
+          <div class="frosted-message">
+            <span>Bistro em espera</span>
+            <p>O chef do bistrô está pronto para criar algo especial.</p>
+          </div>
+        </div>
+
+        <div class="live-recipe-card" id="liveRecipeCard">
+          <img class="result-photo" id="mealPhoto" src="./session-3-meal-hero.png" alt="Prato premium gerado para pet" />
+          <div class="result-copy">
+            <span class="recipe-note">Criado agora pelo Bistro</span>
+            <h2 id="recipeName">Delícia suave de frango com abóbora</h2>
+            <p id="recipeDescription">Uma combinação macia e morna, criada para Luna a partir dos ingredientes que ela costuma gostar.</p>
+            <div class="ingredient-list">
+              <strong>Ingredientes utilizados</strong>
+              <ul id="resultIngredients">
+                <li>Frango</li>
+                <li>Arroz</li>
+                <li>Abóbora</li>
+              </ul>
+            </div>
+            <div class="prep-steps">
+              <strong>Modo de preparo</strong>
+              <ol>
+                <li>Cozinhe separadamente até ficar macio.</li>
+                <li>Misture em textura delicada.</li>
+                <li>Sirva morno.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const profile = {
+        pet: "Luna",
+        breed: "Akita Inu",
+        age: "7 anos",
+        weight: "12 kg",
+        likes: ["frango", "arroz", "abóbora", "refeições mornas"],
+        avoid: ["cebola", "alho", "uva", "chocolate"],
+        texture: "macia",
+        routine: "come melhor à noite"
+      };
+
+      const recipes = [
+        {
+          title: "Delícia suave de frango com abóbora",
+          description: `Uma combinação macia e morna, criada para ${profile.pet} a partir dos ingredientes que ela costuma gostar.`,
+          ingredients: ["Frango desfiado", "Arroz macio", "Abóbora cozida"],
+          observation: `Como ${profile.pet} prefere refeições mornas, finalize o bowl com textura suave antes de servir.`,
+          image: "./session-3-meal-hero.png"
+        },
+        {
+          title: "Bowl delicado de peixe com batata doce",
+          description: `O Bistro trocou a base para uma opção suave, mantendo o preparo leve e acolhedor para a rotina da ${profile.pet}.`,
+          ingredients: ["Peixe em lascas", "Batata doce", "Cenoura delicada"],
+          observation: `Evite qualquer tempero forte e mantenha a textura úmida, fácil de misturar no bowl.`,
+          image: "./session-3-meal-alt.png"
+        },
+        {
+          title: "Combinação aconchegante de arroz e ovos",
+          description: `Uma sugestão simples e afetiva para dias tranquilos, criada com base no perfil personalizado da ${profile.pet}.`,
+          ingredients: ["Ovos cozidos", "Arroz macio", "Abóbora cozida"],
+          observation: `Sirva em porções pequenas e observe o ritmo de aceitação da ${profile.pet}.`,
+          image: "./session-3-meal-hero.png"
+        }
+      ];
+
+      let index = 0;
+      const kitchen = document.getElementById("intelligentKitchen");
+      const chips = [...document.querySelectorAll(".ingredient-chip:not(.add-chip)")];
+
+      chips.forEach(chip => chip.addEventListener("click", () => chip.classList.toggle("active")));
+      document.querySelectorAll(".mode-pill").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".mode-pill").forEach(item => item.classList.remove("active"));
+          button.classList.add("active");
+        });
+      });
+
+      function generateRecipe() {
+        const selected = chips.filter(chip => chip.classList.contains("active")).map(chip => chip.textContent.trim());
+        const recipe = recipes[index % recipes.length];
+        const ingredients = selected.length ? selected.slice(0, 4) : recipe.ingredients;
+        kitchen.classList.add("is-generated");
+        document.getElementById("recipeName").textContent = selected.length > 2
+          ? `Combinação do Bistro com ${ingredients[0].toLowerCase()} e ${ingredients[1].toLowerCase()}`
+          : recipe.title;
+        document.getElementById("recipeDescription").textContent = recipe.description;
+        document.getElementById("resultIngredients").innerHTML = ingredients.map(item => `<li>${item}</li>`).join("");
+        document.getElementById("mealPhoto").src = recipe.image;
+        index += 1;
+      }
+
+      document.getElementById("createRecipe").addEventListener("click", generateRecipe);
+    </script>
+  </body>
+</html>
