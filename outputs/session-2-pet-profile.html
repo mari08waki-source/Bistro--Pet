@@ -26,10 +26,10 @@
           <h1>Conhecer para cuidar melhor.</h1>
         </div>
 
-        <form class="pet-profile-card">
+        <form class="pet-profile-card" id="petProfileForm">
           <label>
             Nome do pet
-            <input value="Luna" />
+            <input name="name" value="Luna" />
           </label>
           <label>
             Nome do tutor
@@ -38,16 +38,16 @@
           <div class="field-row">
             <label>
               Idade
-              <input value="7 anos" />
+              <input name="age" value="7 anos" />
             </label>
             <label>
               Peso
-              <input value="12 kg" />
+              <input name="weight" value="12 kg" />
             </label>
           </div>
           <label>
-            Raça
-            <input value="Akita Inu" />
+            Porte
+            <input name="size" value="médio" />
           </label>
           <section class="menu-style" aria-label="Estilo do cardápio">
             <span class="menu-style-title">Estilo do cardápio</span>
@@ -72,17 +72,60 @@
             <div class="custom-note">
               <label>
                 Detalhes para o chef
-                <textarea>Prefere frango. Come melhor à noite.</textarea>
+                <textarea name="notes">Prefere frango. Come melhor à noite.</textarea>
               </label>
             </div>
           </section>
           <label>
             Preferências
-            <textarea>Gosta de arroz. Prefere refeições mornas. Ama frango.</textarea>
+            <textarea name="preferences">Gosta de arroz. Prefere refeições mornas. Ama frango.</textarea>
           </label>
-          <button class="primary full" type="button">Salvar perfil</button>
+          <label>
+            Alergias/restrições
+            <textarea name="restrictions">cebola, alho, uva, chocolate</textarea>
+          </label>
+          <button class="primary full" type="button" id="savePetProfile">Salvar perfil</button>
         </form>
       </section>
     </main>
+    <script src="./bistropet-storage.js"></script>
+    <script>
+      const petProfileForm = document.getElementById("petProfileForm");
+      const savePetProfileButton = document.getElementById("savePetProfile");
+
+      function fillPetProfileForm() {
+        const profile = window.BistroPetStorage.getPetProfile();
+        Object.entries(profile).forEach(([key, value]) => {
+          const field = petProfileForm.elements[key];
+          if (field) field.value = value;
+        });
+      }
+
+      function collectPetProfileForm() {
+        const data = new FormData(petProfileForm);
+        return {
+          name: String(data.get("name") || "").trim(),
+          size: String(data.get("size") || "").trim(),
+          age: String(data.get("age") || "").trim(),
+          weight: String(data.get("weight") || "").trim(),
+          preferences: String(data.get("preferences") || "").trim(),
+          restrictions: String(data.get("restrictions") || "").trim(),
+          notes: String(data.get("notes") || "").trim()
+        };
+      }
+
+      function savePetProfile() {
+        window.BistroPetStorage.savePetProfile(collectPetProfileForm());
+      }
+
+      function continueToRecipe() {
+        savePetProfile();
+        window.location.href = "./session-3-meal.html";
+      }
+
+      petProfileForm.addEventListener("input", savePetProfile);
+      savePetProfileButton.addEventListener("click", continueToRecipe);
+      fillPetProfileForm();
+    </script>
   </body>
 </html>

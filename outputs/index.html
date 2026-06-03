@@ -47,7 +47,7 @@
                 Senha
                 <input type="password" value="premium" autocomplete="current-password" />
               </label>
-              <button class="primary full">Criar perfil</button>
+              <button class="primary full" type="button" id="createProfile">Criar perfil</button>
               <div class="auth-links" aria-label="Ações de acesso">
                 <button type="button">Cadastro</button>
                 <button type="button">Esqueci minha senha</button>
@@ -58,5 +58,10 @@
         </section>
       </main>
     </div>
+    <script>
+      document.getElementById("createProfile").addEventListener("click", () => {
+        window.location.href = "./session-2-pet-profile.html";
+      });
+    </script>
   </body>
 </html>

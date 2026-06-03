@@ -5,6 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bistro Pet - Plano Semanal</title>
     <link rel="stylesheet" href="./styles.css?v=session4-weekly-plan" />
+    <style>
+      #weeklyPlanner .weekly-kitchen-stage { min-height: 520px; }
+      #weeklyPlanner .weekly-result-card { position: relative; left: auto; right: auto; top: auto; margin: 18px 14px; }
+      #weeklyPlanner .weekly-days { overflow: visible; }
+      #weeklyPlanner .week-day-card { align-items: start; }
+      #weeklyPlanner .week-day-details { margin-top: 8px; font-size: 11px; line-height: 1.35; color: var(--muted); }
+      #weeklyPlanner .week-day-details p { margin: 0 0 6px; }
+      #weeklyPlanner .day-tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+      #weeklyPlanner .day-tab { border: 1px solid rgba(46, 51, 43, 0.13); background: rgba(255, 253, 248, 0.72); border-radius: 999px; padding: 7px 0; font-size: 11px; color: var(--sage-dark); }
+      #weeklyPlanner .day-tab.active { background: #f0eadf; color: var(--ink); }
+      #weeklyPlanner .selected-day-recipe { margin-top: 12px; }
+      #weeklyPlanner .selected-day-recipe .week-day-card { grid-template-columns: 68px 1fr; }
+      #weeklyPlanner .selected-day-recipe .week-day-card img { width: 68px; height: 58px; }
+      #weeklyPlanner .custom-plan-copy { display: none; margin: 6px 0 4px; color: #8c7040; font-size: 12px; line-height: 1.2; }
+      #weeklyPlanner .custom-plan-copy strong { display: block; color: #a27a35; font-size: 13px; margin-bottom: 0; letter-spacing: .04em; }
+      #weeklyPlanner.is-custom-mode .weekly-ingredients > span,
+      #weeklyPlanner.is-custom-mode .weekly-ingredients > small,
+      #weeklyPlanner.is-custom-mode #weeklyChips { display: none; }
+      #weeklyPlanner.is-custom-mode .weekly-controls { background: linear-gradient(180deg, rgba(255, 248, 232, 0.96), rgba(244, 224, 184, 0.82)); border-color: rgba(196, 145, 53, 0.26); }
+      #weeklyPlanner.is-custom-mode .kitchen-switch[for="weeklyCustom"] { background: rgba(234, 216, 180, 0.82); color: #76551f; }
+      #weeklyPlanner .weekly-ingredients { max-height: none; opacity: 1; overflow: visible; transform: none; }
+      #weeklyPlanner.is-custom-mode .weekly-ingredients { display: grid; gap: 6px; }
+      #weeklyPlanner:not(.is-custom-mode) .weekly-ingredients > span,
+      #weeklyPlanner:not(.is-custom-mode) .weekly-ingredients > small,
+      #weeklyPlanner:not(.is-custom-mode) #weeklyChips { display: none; }
+      #weeklyPlanner .custom-special-card { display: none; gap: 5px; padding: 6px; border: 1px solid rgba(120, 148, 96, 0.22); border-radius: 12px; background: rgba(238, 247, 229, 0.72); }
+      #weeklyPlanner.is-custom-mode .custom-plan-copy,
+      #weeklyPlanner.is-custom-mode .custom-special-card,
+      #weeklyPlanner.is-custom-mode .custom-ingredient-row,
+      #weeklyPlanner.is-custom-mode .custom-blocked-card { display: grid; }
+      #weeklyPlanner.is-custom-mode .custom-plan-copy { color: #617753; margin: 0; }
+      #weeklyPlanner.is-custom-mode .custom-plan-copy strong { color: #5f744d; font-size: 12px; }
+      #weeklyPlanner .custom-ingredient-row { display: none; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; margin-top: 3px; padding: 3px; border: 1px solid rgba(120, 148, 96, 0.28); border-radius: 999px; background: rgba(238, 247, 229, 0.78); box-shadow: 0 8px 18px rgba(94, 122, 73, 0.08); }
+      #weeklyPlanner .custom-ingredient-row input { min-width: 0; border: 0; border-radius: 999px; background: transparent; padding: 6px 9px; color: var(--ink); outline: 0; font-size: 12px; }
+      #weeklyPlanner .custom-ingredient-row button { border: 0; border-radius: 999px; background: #d8e6c8; color: #52683f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      #weeklyPlanner .custom-chip-list { display: none; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+      #weeklyPlanner.is-custom-mode .custom-chip-list { display: flex; }
+      #weeklyPlanner .custom-ingredient-message { min-height: 0; margin-top: 0; color: #8c7040; font-size: 11px; line-height: 1.2; }
+      #weeklyPlanner .custom-chip-list .ingredient-chip { padding: 6px 9px; font-size: 11px; }
+      #weeklyPlanner .custom-blocked-card { display: grid; gap: 5px; margin-top: 6px; padding: 6px; border: 1px solid rgba(177, 91, 82, 0.22); border-radius: 12px; background: rgba(255, 238, 232, 0.72); }
+      #weeklyPlanner .custom-blocked-title { color: #9a5147; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
+      #weeklyPlanner .custom-blocked-card .custom-ingredient-row { display: grid; margin-top: 0; border-color: rgba(177, 91, 82, 0.24); background: rgba(255, 250, 247, 0.82); box-shadow: none; }
+      #weeklyPlanner .custom-blocked-card .custom-ingredient-row button { background: #efd1c9; color: #8b473e; }
+      #weeklyPlanner .custom-blocked-card .custom-chip-list { display: flex; }
+    </style>
   </head>
   <body class="session-three-body">
     <main class="meal-session bistro-generator">
@@ -39,7 +84,18 @@
 
           <div class="weekly-ingredients">
             <span>Ingredientes</span>
-            <small>Escolha bases especiais para o plano da semana.</small>
+            <small>Ingredientes especiais</small>
+            <div class="custom-special-card" id="customSpecialCard">
+              <div class="custom-plan-copy" id="customPlanCopy">
+                <strong>Ingredientes especiais</strong>
+              </div>
+              <div class="custom-ingredient-row" id="customIngredientRow">
+                <input id="customIngredientInput" type="text" placeholder="Novo ingrediente" />
+                <button id="confirmIngredient" type="button">Adicionar</button>
+              </div>
+              <div class="custom-chip-list" id="customChipList" aria-label="Ingredientes personalizados"></div>
+              <div class="custom-ingredient-message" id="customIngredientMessage" aria-live="polite"></div>
+            </div>
             <div class="ingredient-chips" id="weeklyChips">
               <button class="ingredient-chip active" type="button">Frango</button>
               <button class="ingredient-chip active" type="button">Arroz</button>
@@ -48,9 +104,18 @@
               <button class="ingredient-chip" type="button">Peixe</button>
               <button class="ingredient-chip add-chip" type="button">Adicionar ingrediente</button>
             </div>
+            <div class="custom-blocked-card" id="customBlockedCard">
+              <span class="custom-blocked-title">&#128308; Ingredientes proibidos</span>
+              <div class="custom-ingredient-row">
+                <input id="customBlockedInput" type="text" placeholder="Ingrediente proibido" />
+                <button id="confirmBlockedIngredient" type="button">Adicionar</button>
+              </div>
+              <div class="custom-chip-list" id="customBlockedChipList" aria-label="Ingredientes proibidos personalizados"></div>
+              <div class="custom-ingredient-message" id="customBlockedMessage" aria-live="polite"></div>
+            </div>
           </div>
 
-          <button class="primary full create-week-plan" type="button" id="createWeekPlan">✨ Criar plano do chef</button>
+          <button class="primary full create-week-plan" type="button" id="createWeekPlan">✨ Criar semana com receitas e imagens</button>
         </div>
 
         <div class="weekly-kitchen-stage">
@@ -61,7 +126,7 @@
           </div>
 
           <div class="weekly-result-card" id="weeklyResultCard">
-            <span class="recipe-note">Semana criada pelo Bistro</span>
+            <span class="recipe-note">Plano assinado pelo chef</span>
             <h2>Plano delicado da Luna</h2>
             <div class="weekly-days" id="weeklyDays"></div>
           </div>
@@ -69,10 +134,25 @@
       </section>
     </main>
 
+    <script src="./bistropet-storage.js"></script>
     <script>
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
       const weeklyChips = [...document.querySelectorAll("#weeklyChips .ingredient-chip:not(.add-chip)")];
+      const addIngredientButton = document.querySelector("#weeklyChips .add-chip");
+      const customIngredientInput = document.getElementById("customIngredientInput");
+      const confirmIngredientButton = document.getElementById("confirmIngredient");
+      const customIngredientMessage = document.getElementById("customIngredientMessage");
+      const customChipList = document.getElementById("customChipList");
+      const customBlockedInput = document.getElementById("customBlockedInput");
+      const confirmBlockedIngredientButton = document.getElementById("confirmBlockedIngredient");
+      const customBlockedMessage = document.getElementById("customBlockedMessage");
+      const customBlockedChipList = document.getElementById("customBlockedChipList");
+      const createWeekPlanButton = document.getElementById("createWeekPlan");
+      const customIngredients = [];
+      const customBlockedIngredients = [];
+      let currentPlan = [];
+      let activeDayIndex = null;
 
       const automaticPlan = [
         ["Segunda", "Frango suave com arroz", "./session-3-meal-hero.png"],
@@ -86,16 +166,36 @@
 
       weeklyChips.forEach(chip => chip.addEventListener("click", () => chip.classList.toggle("active")));
 
-      function createDayCard(day, title, image) {
+      function createDayCard(day, title, image, details, open = false) {
+        const detailMarkup = details && Array.isArray(details.ingredients) ? `
+          <div class="week-day-details"${open ? "" : " hidden"}>
+            <p><strong>Ingredientes</strong>: ${details.ingredients.join(", ")}</p>
+            <p><strong>Modo de preparo</strong>: ${details.prep}</p>
+            <p>${details.customNote || details.note}</p>
+          </div>
+        ` : "";
         return `
-          <article class="week-day-card">
+          <article class="week-day-card" role="button" tabindex="0" data-expandable-day>
             <img src="${image}" alt="${title}" />
             <div>
               <strong>${day}</strong>
               <span>${title}</span>
+              ${detailMarkup}
             </div>
           </article>
         `;
+      }
+
+      function shortDayName(day) {
+        return {
+          Segunda: "Seg",
+          Terça: "Ter",
+          Quarta: "Qua",
+          Quinta: "Qui",
+          Sexta: "Sex",
+          Sábado: "Sáb",
+          Domingo: "Dom"
+        }[day] || day.slice(0, 3);
       }
 
       function generateWeeklyPlan() {
@@ -114,7 +214,475 @@
         weeklyPlanner.classList.add("is-generated");
       }
 
-      document.getElementById("createWeekPlan").addEventListener("click", generateWeeklyPlan);
+      const dayNames = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+      const baseIngredients = [
+        "Frango",
+        "Arroz",
+        "Abóbora",
+        "Peixe",
+        "Batata doce",
+        "Cenoura",
+        "Ovos",
+        "Quinoa",
+        "Chuchu",
+        "Abobrinha",
+        "Patinho",
+        "Mandioquinha"
+      ];
+      const allowedIngredientTerms = [
+        ["frango", "Frango"],
+        ["racao", "Ração"],
+        ["ração", "Ração"],
+        ["arroz", "Arroz"],
+        ["abobora", "Abóbora"],
+        ["peixe", "Peixe"],
+        ["batata doce", "Batata doce"],
+        ["batata", "Batata"],
+        ["cenoura", "Cenoura"],
+        ["ovos", "Ovos"],
+        ["ovo", "Ovos"],
+        ["quinoa", "Quinoa"],
+        ["chuchu", "Chuchu"],
+        ["abobrinha", "Abobrinha"],
+        ["patinho", "Patinho"],
+        ["mandioquinha", "Mandioquinha"]
+      ];
+      const planNames = ["Bowl leve", "Menu delicado", "Prato bistro", "Combinação suave", "Receita aconchegante"];
+      const customPlanNames = [
+        "Bowl delicado",
+        "Creme morno",
+        "Menu suave",
+        "Prato leve",
+        "Mix bistro",
+        "Jardim macio",
+        "Receita de chef"
+      ];
+      const customImageCycle = [
+        "./session-3-meal-hero.png",
+        "./session-3-meal-alt.png",
+        "./session-3-meal-hero.png",
+        "./session-3-meal-alt.png",
+        "./session-3-meal-hero.png",
+        "./session-3-meal-alt.png",
+        "./session-3-meal-hero.png"
+      ];
+      const textureNotes = ["textura cremosa", "legumes macios", "base úmida", "cubos delicados", "lascas suaves", "mistura aveludada", "porção leve"];
+      const presentationNotes = ["em bowl baixo", "com finalização central", "em camadas delicadas", "com base cremosa", "em porção compacta", "com toque rústico", "em montagem suave"];
+      const prepTemplates = [
+        "Cozinhe separadamente até ficar macio, misture em textura delicada e sirva morno.",
+        "Prepare em cocção lenta, desfie ou corte suavemente e finalize sem temperos fortes.",
+        "Cozinhe bem os ingredientes, una em pequenas porções e ajuste a umidade antes de servir.",
+        "Deixe tudo bem macio, misture com cuidado e ofereça em temperatura confortável.",
+        "Cozinhe a base principal, incorpore o legume no final e sirva com textura úmida.",
+        "Prepare os ingredientes em cubos pequenos, una tudo ainda morno e aguarde esfriar levemente.",
+        "Cozinhe até ficar macio, solte em lascas delicadas e sirva em pequenas porções."
+      ];
+
+      const customChefNotes = [
+        "ObservaÃ§Ã£o do chef: uma abertura delicada para a semana, feita sob medida para a Luna.",
+        "ObservaÃ§Ã£o do chef: preparo leve, com contraste suave de textura e apresentaÃ§Ã£o acolhedora.",
+        "ObservaÃ§Ã£o do chef: combinaÃ§Ã£o pensada para variar sem sair dos ingredientes escolhidos.",
+        "ObservaÃ§Ã£o do chef: porÃ§Ã£o elegante, macia e confortÃ¡vel para uma rotina especial.",
+        "ObservaÃ§Ã£o do chef: montagem com toque de bistrÃ´, respeitando a lista personalizada.",
+        "ObservaÃ§Ã£o do chef: receita aconchegante, ideal para servir morna e bem equilibrada.",
+        "ObservaÃ§Ã£o do chef: fechamento da semana com composiÃ§Ã£o simples, bonita e cuidadosa."
+      ];
+
+      const customChefNotesClean = [
+        "Observa\u00e7\u00e3o do chef: uma abertura delicada para a semana, feita sob medida para a Luna.",
+        "Observa\u00e7\u00e3o do chef: preparo leve, com contraste suave de textura e apresenta\u00e7\u00e3o acolhedora.",
+        "Observa\u00e7\u00e3o do chef: combina\u00e7\u00e3o pensada para variar sem sair dos ingredientes escolhidos.",
+        "Observa\u00e7\u00e3o do chef: por\u00e7\u00e3o elegante, macia e confort\u00e1vel para uma rotina especial.",
+        "Observa\u00e7\u00e3o do chef: montagem com toque de bistr\u00f4, respeitando a lista personalizada.",
+        "Observa\u00e7\u00e3o do chef: receita aconchegante, ideal para servir morna e bem equilibrada.",
+        "Observa\u00e7\u00e3o do chef: fechamento da semana com composi\u00e7\u00e3o simples, bonita e cuidadosa."
+      ];
+
+      function normalize(value) {
+        return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      }
+
+      function splitList(value) {
+        return String(value || "").split(/[,.;\n]/).map(item => item.trim()).filter(Boolean);
+      }
+
+      function extractIngredientTerms(value) {
+        const found = [];
+        splitList(value).forEach(item => {
+          const cleanItem = normalize(item);
+          allowedIngredientTerms.forEach(([term, label]) => {
+            if (cleanItem.includes(term) && !found.some(existing => normalize(existing) === normalize(label))) {
+              found.push(label);
+            }
+          });
+        });
+        return found;
+      }
+
+      function cleanCustomIngredient(value) {
+        return String(value || "").trim().replace(/\s+/g, " ");
+      }
+
+      function cleanCustomIngredientList(value) {
+        return splitList(value).map(cleanCustomIngredient).filter(Boolean);
+      }
+
+      function restrictionTerms(profile) {
+        return uniqueIngredients([
+          ...extractIngredientTerms(profile.restrictions),
+          ...splitList(profile.restrictions)
+        ]);
+      }
+
+      function isRestricted(ingredient, restrictions) {
+        const cleanIngredient = normalize(ingredient);
+        return restrictions.some(item => {
+          const cleanRestriction = normalize(item);
+          if (!cleanRestriction) return false;
+          if (cleanIngredient.includes(cleanRestriction) || cleanRestriction.includes(cleanIngredient)) return true;
+          if ((cleanRestriction.includes("carne") || cleanRestriction.includes("bovina")) && ["patinho", "carne", "carne bovina"].includes(cleanIngredient)) return true;
+          return false;
+        });
+      }
+
+      function hasRestrictedText(value, restrictions) {
+        const cleanValue = normalize(value);
+        return restrictions.some(item => {
+          const cleanRestriction = normalize(item);
+          return cleanRestriction && cleanValue.includes(cleanRestriction);
+        });
+      }
+
+      function uniqueIngredients(items) {
+        return items.filter((item, itemIndex, list) => {
+          const cleanItem = normalize(item);
+          return list.findIndex(candidate => {
+            const cleanCandidate = normalize(candidate);
+            return cleanCandidate.includes(cleanItem) || cleanItem.includes(cleanCandidate);
+          }) === itemIndex;
+        });
+      }
+
+      function selectedIngredients() {
+        return [...document.querySelectorAll("#weeklyChips .ingredient-chip:not(.add-chip)")]
+          .filter(chip => chip.classList.contains("active"))
+          .map(chip => chip.textContent.trim());
+      }
+
+      function renderCustomChips() {
+        customChipList.innerHTML = customIngredients.map(item => `
+          <button class="ingredient-chip active" type="button" data-custom-ingredient="${item}">${item}</button>
+        `).join("");
+        customChipList.querySelectorAll("[data-custom-ingredient]").forEach(chip => {
+          chip.addEventListener("click", () => {
+            const index = customIngredients.findIndex(item => normalize(item) === normalize(chip.dataset.customIngredient));
+            if (index >= 0) customIngredients.splice(index, 1);
+            renderCustomChips();
+          });
+        });
+      }
+
+      function renderCustomBlockedChips() {
+        customBlockedChipList.innerHTML = customBlockedIngredients.map(item => `
+          <button class="ingredient-chip active" type="button" data-custom-blocked="${item}">${item}</button>
+        `).join("");
+        customBlockedChipList.querySelectorAll("[data-custom-blocked]").forEach(chip => {
+          chip.addEventListener("click", () => {
+            const index = customBlockedIngredients.findIndex(item => normalize(item) === normalize(chip.dataset.customBlocked));
+            if (index >= 0) customBlockedIngredients.splice(index, 1);
+            renderCustomBlockedChips();
+          });
+        });
+      }
+
+      function addCustomBlockedIngredient() {
+        const profile = window.BistroPetStorage.getPetProfile();
+        const ingredients = cleanCustomIngredientList(customBlockedInput.value);
+        customBlockedMessage.textContent = "";
+        if (!ingredients.length) return;
+        const customBlocked = ingredients.find(ingredient => isRestricted(ingredient, customBlockedIngredients));
+        if (customBlocked) {
+          customIngredientMessage.textContent = `Esse ingrediente estÃ¡ nos proibidos da ${profile.name || "Luna"}.`;
+          return;
+        }
+        ingredients.forEach(ingredient => {
+          const selectedIndex = customIngredients.findIndex(item => normalize(item) === normalize(ingredient));
+          if (selectedIndex >= 0) customIngredients.splice(selectedIndex, 1);
+          if (!customBlockedIngredients.some(item => normalize(item) === normalize(ingredient))) {
+            customBlockedIngredients.push(ingredient);
+          }
+        });
+        renderCustomChips();
+        renderCustomBlockedChips();
+        customBlockedInput.value = "";
+      }
+
+      function addCustomIngredient() {
+        const profile = window.BistroPetStorage.getPetProfile();
+        const restrictions = restrictionTerms(profile);
+        const ingredients = cleanCustomIngredientList(customIngredientInput.value);
+        customIngredientMessage.textContent = "";
+        if (!ingredients.length) return;
+        const blocked = ingredients.find(ingredient => isRestricted(ingredient, restrictions));
+        if (blocked) {
+          customIngredientMessage.textContent = `Esse ingrediente não combina com as restrições da ${profile.name || "Luna"}.`;
+          return;
+        }
+        ingredients.forEach(ingredient => {
+          if (isRestricted(ingredient, customBlockedIngredients)) return;
+          if (!customIngredients.some(item => normalize(item) === normalize(ingredient))) {
+            customIngredients.push(ingredient);
+          }
+        });
+        renderCustomChips();
+        customIngredientInput.value = "";
+        return;
+        if (customIngredients.some(item => normalize(item) === normalize(ingredient))) {
+          customIngredientMessage.textContent = `${ingredient} já está na seleção personalizada.`;
+          return;
+        }
+        customIngredients.push(ingredient);
+        renderCustomChips();
+        customIngredientInput.value = "";
+      }
+
+      function recipeIngredients(pool, index) {
+        const picked = [];
+        for (let offset = 0; offset < pool.length && picked.length < 3; offset += 1) {
+          const item = pool[(index + offset * 2) % pool.length];
+          if (item && !picked.some(existing => normalize(existing) === normalize(item))) picked.push(item);
+        }
+        return picked;
+      }
+
+      function customRecipeIngredients(bases, support, index) {
+        const patterns = [
+          [0, 1],
+          [1, 2],
+          [2, 3],
+          [3, 0],
+          [0, 2, 3],
+          [1, 3, 0],
+          [2, 0, 1]
+        ];
+        const picked = [];
+        const pattern = patterns[index % patterns.length];
+        pattern.forEach(offset => {
+          const item = bases[offset % bases.length];
+          if (item && !picked.some(existing => normalize(existing) === normalize(item))) picked.push(item);
+        });
+        return picked.length ? picked : recipeIngredients(support, index);
+      }
+
+      function completeCustomRecipeIngredients(required, complements, restrictions, index) {
+        const picked = [...required];
+        const complementGoal = Math.max(1, 3 - picked.length);
+        for (let offset = 0; offset < complements.length && picked.length < required.length + complementGoal; offset += 1) {
+          const item = complements[(index + offset * 2) % complements.length];
+          if (item && !isRestricted(item, restrictions) && !picked.some(existing => normalize(existing) === normalize(item))) picked.push(item);
+        }
+        return picked.length ? picked.filter(item => !isRestricted(item, restrictions)) : recipeIngredients(complements, index).filter(item => !isRestricted(item, restrictions));
+      }
+
+      function recipeKey(ingredients) {
+        return uniqueIngredients(ingredients)
+          .map(item => normalize(item))
+          .sort()
+          .join("|");
+      }
+
+      function uniqueWeeklyIngredients({ customMode, safePreferred, safeBase, pool, activeRestrictions, dayIndex, usedCombinations }) {
+        const attempts = Math.max(14, pool.length + safeBase.length + safePreferred.length);
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          const ingredients = customMode
+            ? completeCustomRecipeIngredients(safePreferred, safeBase, activeRestrictions, dayIndex + attempt)
+            : recipeIngredients(pool, dayIndex + attempt);
+          const safeIngredients = uniqueIngredients(ingredients).filter(item => !isRestricted(item, activeRestrictions));
+          const key = recipeKey(safeIngredients);
+          if (safeIngredients.length && !usedCombinations.has(key)) {
+            usedCombinations.add(key);
+            return safeIngredients;
+          }
+        }
+        const fallbackPool = uniqueIngredients([...safePreferred, ...safeBase, ...pool]).filter(item => !isRestricted(item, activeRestrictions));
+        const fallback = [];
+        for (let offset = 0; offset < fallbackPool.length && fallback.length < 3; offset += 1) {
+          const item = fallbackPool[(dayIndex + offset) % fallbackPool.length];
+          if (!fallback.some(existing => normalize(existing) === normalize(item))) fallback.push(item);
+        }
+        usedCombinations.add(recipeKey(fallback));
+        return fallback;
+      }
+
+      function toggleDayDetails(card) {
+        const details = card.querySelector(".week-day-details");
+        if (!details) return;
+        const shouldOpen = details.hidden;
+        weeklyDays.querySelectorAll(".week-day-details").forEach(item => {
+          item.hidden = true;
+        });
+        details.hidden = !shouldOpen;
+      }
+
+      function buildWeeklyPlan(profile) {
+        const restrictions = restrictionTerms(profile);
+        const preferred = extractIngredientTerms(profile.preferences);
+        const selected = selectedIngredients();
+        const customMode = document.getElementById("weeklyCustom").checked;
+        const source = customMode ? customIngredients : preferred;
+        const activeRestrictions = uniqueIngredients([...restrictions, ...customBlockedIngredients]);
+        const safePreferred = source.filter(item => !isRestricted(item, activeRestrictions));
+        const safeBase = baseIngredients.filter(item => !isRestricted(item, activeRestrictions) && !safePreferred.some(base => normalize(base) === normalize(item)));
+        const pool = uniqueIngredients([...safePreferred, ...safeBase]);
+
+        const usedCombinations = new Set();
+        const usedTitles = new Set();
+
+        return dayNames.map((day, index) => {
+          const ingredients = uniqueWeeklyIngredients({
+            customMode,
+            safePreferred,
+            safeBase,
+            pool,
+            activeRestrictions,
+            dayIndex: index,
+            usedCombinations
+          });
+          const base = ingredients[0] || (customMode ? "ingrediente personalizado" : "Arroz");
+          const pair = ingredients[1] || base;
+          let titlePrefixIndex = index;
+          let title = "";
+          do {
+            title = customMode
+              ? `${customPlanNames[titlePrefixIndex % customPlanNames.length]} de ${base.toLowerCase()}${ingredients.length > 1 ? ` com ${pair.toLowerCase()}` : ""}`
+              : `${planNames[titlePrefixIndex % planNames.length]} de ${base.toLowerCase()} com ${pair.toLowerCase()}`;
+            titlePrefixIndex += 1;
+          } while (usedTitles.has(normalize(title)) && titlePrefixIndex < index + 14);
+          usedTitles.add(normalize(title));
+          const prep = customMode
+            ? `${prepTemplates[index % prepTemplates.length]} Finalize com ${textureNotes[index % textureNotes.length]} ${presentationNotes[index % presentationNotes.length]}.`
+            : prepTemplates[index % prepTemplates.length];
+          const safeTitle = hasRestrictedText(title, activeRestrictions) ? `${customMode ? customPlanNames[index % customPlanNames.length] : planNames[index % planNames.length]} personalizado` : title;
+          const safePrep = hasRestrictedText(prep, activeRestrictions) ? prepTemplates[(index + 1) % prepTemplates.length] : prep;
+          const safeCustomNote = customMode && hasRestrictedText(customChefNotesClean[index % customChefNotesClean.length], activeRestrictions) ? "Observa\u00e7\u00e3o do chef: receita personalizada, leve e fiel aos ingredientes permitidos." : customChefNotesClean[index % customChefNotesClean.length];
+          return {
+            day,
+            title: safeTitle,
+            ingredients,
+            prep: safePrep,
+            customNote: customMode ? safeCustomNote : "",
+            note: `Observação do chef: plano pensado para ${profile.name || "seu pet"}, respeitando ${profile.age || "a idade"}, ${profile.weight || "o peso"} e mantendo fora do preparo os ingredientes bloqueados.`,
+            image: customMode ? customImageCycle[index % customImageCycle.length] : index % 2 === 0 ? "./session-3-meal-hero.png" : "./session-3-meal-alt.png",
+            profile: {
+              name: profile.name || "seu pet",
+              size: profile.size,
+              age: profile.age,
+              weight: profile.weight
+            }
+          };
+        });
+      }
+
+      function renderProfileWeeklyPlan(plan) {
+        currentPlan = plan;
+        weeklyDays.innerHTML = `
+          <div class="day-tabs" aria-label="Dias da semana">
+            ${plan.map((item, index) => `
+              <button class="day-tab${activeDayIndex === index ? " active" : ""}" type="button" data-day-index="${index}">
+                ${shortDayName(item.day)}
+              </button>
+            `).join("")}
+          </div>
+          <div class="selected-day-recipe">
+            ${activeDayIndex === null ? "" : `<div data-selected-day="${plan[activeDayIndex].day}">
+              ${createDayCard(
+                plan[activeDayIndex].day,
+                plan[activeDayIndex].title,
+                plan[activeDayIndex].image,
+                plan[activeDayIndex],
+                true
+              )}
+            </div>`}
+          </div>
+        `;
+        weeklyDays.querySelectorAll("[data-day-index]").forEach(button => {
+          button.addEventListener("click", () => {
+            const nextIndex = Number(button.dataset.dayIndex);
+            activeDayIndex = activeDayIndex === nextIndex ? null : nextIndex;
+            renderProfileWeeklyPlan(currentPlan);
+          });
+        });
+        weeklyPlanner.classList.add("is-generated");
+      }
+
+      function refreshProfileCopy(profile) {
+        const name = profile.name || "Luna";
+        document.querySelector(".chef-pet-card strong").textContent = name;
+        document.querySelector(".weekly-heading h1").textContent = `O chef vai organizar a semana da ${name}.`;
+        document.querySelector(".weekly-result-card h2").textContent = `Plano delicado da ${name}`;
+      }
+
+      function updateModeState() {
+        const customMode = document.getElementById("weeklyCustom").checked;
+        weeklyPlanner.classList.toggle("is-custom-mode", customMode);
+        customIngredientMessage.textContent = "";
+        customBlockedMessage.textContent = "";
+        createWeekPlanButton.textContent = customMode ? "✨ Criar plano da semana" : "✨ Criar semana com receitas e imagens";
+      }
+
+      function isSavedPlanValid(plan, profile) {
+        const restrictions = extractIngredientTerms(profile.restrictions);
+        return Array.isArray(plan) && plan.length === 7 && !plan.some(item => {
+          const text = `${item.title || ""} ${(item.ingredients || []).join(" ")}`;
+          return isRestricted(text, restrictions);
+        });
+      }
+
+      function generateProfileWeeklyPlan() {
+        const profile = window.BistroPetStorage.getPetProfile();
+        if (document.getElementById("weeklyCustom").checked && customIngredients.length === 0) {
+          customIngredientMessage.textContent = "Adicione pelo menos um ingrediente para criar o plano personalizado.";
+          return;
+        }
+        const plan = buildWeeklyPlan(profile);
+        activeDayIndex = null;
+        renderProfileWeeklyPlan(plan);
+        window.BistroPetStorage.saveWeeklyPlan(plan);
+      }
+
+      const savedProfile = window.BistroPetStorage.getPetProfile();
+      const savedPlan = window.BistroPetStorage.getWeeklyPlan();
+      refreshProfileCopy(savedProfile);
+      if (isSavedPlanValid(savedPlan, savedProfile)) {
+        activeDayIndex = null;
+        renderProfileWeeklyPlan(savedPlan);
+      } else {
+        activeDayIndex = null;
+        renderProfileWeeklyPlan(buildWeeklyPlan(savedProfile));
+      }
+      updateModeState();
+      document.getElementById("weeklyAuto").addEventListener("change", updateModeState);
+      document.getElementById("weeklyCustom").addEventListener("change", updateModeState);
+      addIngredientButton.addEventListener("click", () => {
+        document.getElementById("weeklyCustom").checked = true;
+        updateModeState();
+        customIngredientInput.focus();
+      });
+      confirmIngredientButton.addEventListener("click", addCustomIngredient);
+      customIngredientInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addCustomIngredient();
+        }
+      });
+      confirmBlockedIngredientButton.addEventListener("click", addCustomBlockedIngredient);
+      customBlockedInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addCustomBlockedIngredient();
+        }
+      });
+      createWeekPlanButton.addEventListener("click", generateProfileWeeklyPlan);
     </script>
   </body>
 </html>

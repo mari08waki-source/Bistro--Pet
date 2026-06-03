@@ -5,6 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bistro Pet - Gerador de Receitas</title>
     <link rel="stylesheet" href="./styles.css?v=session3-bistro-generator-fixed-width" />
+    <style>
+      .mode-panel { display: none; gap: 8px; }
+      .mode-panel.active { display: grid; }
+      .mode-panel textarea,
+      .mode-panel input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.76);
+        color: var(--ink);
+        font: inherit;
+        font-size: 12px;
+        line-height: 1.35;
+        padding: 9px 10px;
+      }
+      .mode-panel textarea { min-height: 58px; resize: vertical; }
+      .mode-panel label { display: grid; gap: 6px; color: var(--sage-dark); font-size: 12px; font-weight: 800; }
+      .ingredient-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+      .ingredient-entry button {
+        border: 1px solid rgba(85, 106, 84, 0.24);
+        border-radius: 8px;
+        background: #f0eadf;
+        color: var(--sage-dark);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 0 10px;
+      }
+      .restriction-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; }
+      .restriction-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid rgba(160, 54, 48, 0.32);
+        border-radius: 999px;
+        background: rgba(160, 54, 48, 0.09);
+        color: #9b2f2a;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 6px 8px;
+      }
+      .restriction-chip button {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        line-height: 1;
+        padding: 0;
+      }
+      .special-chip {
+        border-color: rgba(85, 106, 84, 0.24);
+        background: rgba(85, 106, 84, 0.1);
+        color: var(--sage-dark);
+      }
+      .mode-warning {
+        min-height: 15px;
+        color: #9b2f2a;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+      .chef-preview {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.72);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+        padding: 10px;
+      }
+      .kitchen-ingredients { max-height: 286px; opacity: 1; transform: translateY(0); }
+    </style>
   </head>
   <body class="session-three-body">
     <main class="meal-session bistro-generator">
@@ -21,60 +94,66 @@
         <h1>Hoje vamos criar algo especial para Luna.</h1>
 
         <div class="recipe-modes" aria-label="Modo de receita">
-          <button class="mode-pill" type="button" data-mode="livre">
-            Receita livre
-          </button>
-          <button class="mode-pill active" type="button" data-mode="personalizada">
-            Personalizada
-          </button>
-          <button class="mode-pill" type="button" data-mode="chef">
-            Sugestão do chef
-          </button>
+          <button class="mode-pill" type="button" data-mode="livre">Receita livre</button>
+          <button class="mode-pill active" type="button" data-mode="personalizada">Personalizada</button>
+          <button class="mode-pill" type="button" data-mode="chef">Sugestao do chef</button>
         </div>
       </section>
 
       <section class="intelligent-kitchen" id="intelligentKitchen">
         <div class="generator-modes">
-          <input class="kitchen-mode-input" type="radio" name="kitchen-mode" id="manualMode" />
-          <input class="kitchen-mode-input" type="radio" name="kitchen-mode" id="autoMode" checked />
-          <input class="kitchen-mode-input" type="radio" name="kitchen-mode" id="customMode" />
-
-          <div class="kitchen-switches" aria-label="Modos inteligentes de receita">
-            <label class="kitchen-switch" for="manualMode">
-              <span>Modo Manual</span>
-              <i aria-hidden="true"></i>
-            </label>
-            <label class="kitchen-switch" for="autoMode">
-              <span>Modo Automático</span>
-              <i aria-hidden="true"></i>
-            </label>
-            <label class="kitchen-switch" for="customMode">
-              <span>Modo Personalizado</span>
-              <i aria-hidden="true"></i>
-            </label>
-          </div>
-
           <div class="kitchen-ingredients">
-            <span>Ingredientes</span>
-            <small>Escolha o que o chef pode usar hoje.</small>
-            <div class="ingredient-chips" id="ingredientChips">
-              <button class="ingredient-chip active" type="button">Frango</button>
-              <button class="ingredient-chip active" type="button">Arroz</button>
-              <button class="ingredient-chip" type="button">Batata</button>
-              <button class="ingredient-chip active" type="button">Abóbora</button>
-              <button class="ingredient-chip" type="button">Peixe</button>
-              <button class="ingredient-chip add-chip" type="button">Adicionar ingrediente</button>
+            <span id="modePanelTitle">Personalizada</span>
+            <small id="modePanelCopy">Informe ingredientes especiais e restricoes para o Bistro completar com bases seguras.</small>
+
+            <div class="mode-panel" data-panel="livre">
+              <label for="freeIngredientInput">
+                Ingredientes
+                <div class="ingredient-entry">
+                  <input id="freeIngredientInput" type="text" placeholder="Digite um ingrediente" />
+                  <button id="addFreeIngredient" type="button">Adicionar</button>
+                </div>
+              </label>
+              <div class="restriction-list" id="freeIngredientTags"></div>
+              <div class="mode-warning" id="freeWarning"></div>
+            </div>
+
+            <div class="mode-panel active" data-panel="personalizada">
+              <label for="specialIngredients">
+                Ingredientes especiais
+                <div class="ingredient-entry">
+                  <input id="specialIngredients" type="text" placeholder="Digite ingredientes importantes para Luna" />
+                  <button id="addSpecialIngredient" type="button">Adicionar</button>
+                </div>
+              </label>
+              <div class="restriction-list" id="specialIngredientTags"></div>
+              <label for="restrictedFoods">
+                Alimentos proibidos
+                <div class="ingredient-entry">
+                  <input id="restrictedFoods" type="text" placeholder="Digite um alimento proibido" />
+                  <button id="addBlockedIngredient" type="button">Adicionar</button>
+                </div>
+              </label>
+              <div class="restriction-list" id="restrictionList"></div>
+              <div class="mode-warning" id="customWarning"></div>
+            </div>
+
+            <div class="mode-panel" data-panel="chef">
+              <div class="chef-preview">
+                O chef cria uma sugestao automatica elegante com nome da receita, ingredientes e modo de preparo.
+              </div>
             </div>
           </div>
 
-          <button class="primary full create-chef-recipe" type="button" id="createRecipe">Criar receita do chef</button>
+          <button class="primary full create-chef-recipe" type="button" id="createRecipe">Criar receita</button>
+          <button class="primary full create-chef-recipe" type="button" id="openWeeklyPlan">Plano semanal</button>
         </div>
 
         <div class="sleeping-kitchen">
-          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha premium do Bistro aguardando criação" />
+          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha premium do Bistro aguardando criacao" />
           <div class="frosted-message">
             <span>Bistro em espera</span>
-            <p>O chef do bistrô está pronto para criar algo especial.</p>
+            <p>O chef do bistro esta pronto para criar algo especial.</p>
           </div>
         </div>
 
@@ -82,20 +161,20 @@
           <img class="result-photo" id="mealPhoto" src="./session-3-meal-hero.png" alt="Prato premium gerado para pet" />
           <div class="result-copy">
             <span class="recipe-note">Criado agora pelo Bistro</span>
-            <h2 id="recipeName">Delícia suave de frango com abóbora</h2>
-            <p id="recipeDescription">Uma combinação macia e morna, criada para Luna a partir dos ingredientes que ela costuma gostar.</p>
+            <h2 id="recipeName">Delicia suave de frango com abobora</h2>
+            <p id="recipeDescription">Uma combinacao macia e morna, criada para Luna a partir dos ingredientes que ela costuma gostar.</p>
             <div class="ingredient-list">
               <strong>Ingredientes utilizados</strong>
               <ul id="resultIngredients">
                 <li>Frango</li>
                 <li>Arroz</li>
-                <li>Abóbora</li>
+                <li>Abobora</li>
               </ul>
             </div>
             <div class="prep-steps">
               <strong>Modo de preparo</strong>
-              <ol>
-                <li>Cozinhe separadamente até ficar macio.</li>
+              <ol id="prepSteps">
+                <li>Cozinhe separadamente ate ficar macio.</li>
                 <li>Misture em textura delicada.</li>
                 <li>Sirva morno.</li>
               </ol>
@@ -105,69 +184,370 @@
       </section>
     </main>
 
+    <script src="./bistropet-storage.js"></script>
     <script>
-      const profile = {
-        pet: "Luna",
-        breed: "Akita Inu",
-        age: "7 anos",
-        weight: "12 kg",
-        likes: ["frango", "arroz", "abóbora", "refeições mornas"],
-        avoid: ["cebola", "alho", "uva", "chocolate"],
-        texture: "macia",
-        routine: "come melhor à noite"
-      };
-
-      const recipes = [
-        {
-          title: "Delícia suave de frango com abóbora",
-          description: `Uma combinação macia e morna, criada para ${profile.pet} a partir dos ingredientes que ela costuma gostar.`,
-          ingredients: ["Frango desfiado", "Arroz macio", "Abóbora cozida"],
-          observation: `Como ${profile.pet} prefere refeições mornas, finalize o bowl com textura suave antes de servir.`,
-          image: "./session-3-meal-hero.png"
-        },
-        {
-          title: "Bowl delicado de peixe com batata doce",
-          description: `O Bistro trocou a base para uma opção suave, mantendo o preparo leve e acolhedor para a rotina da ${profile.pet}.`,
-          ingredients: ["Peixe em lascas", "Batata doce", "Cenoura delicada"],
-          observation: `Evite qualquer tempero forte e mantenha a textura úmida, fácil de misturar no bowl.`,
-          image: "./session-3-meal-alt.png"
-        },
-        {
-          title: "Combinação aconchegante de arroz e ovos",
-          description: `Uma sugestão simples e afetiva para dias tranquilos, criada com base no perfil personalizado da ${profile.pet}.`,
-          ingredients: ["Ovos cozidos", "Arroz macio", "Abóbora cozida"],
-          observation: `Sirva em porções pequenas e observe o ritmo de aceitação da ${profile.pet}.`,
-          image: "./session-3-meal-hero.png"
-        }
+      const safeCatalog = [
+        "Frango desfiado",
+        "Arroz macio",
+        "Abobora cozida",
+        "Peixe em lascas",
+        "Batata doce",
+        "Cenoura delicada",
+        "Ovos cozidos",
+        "Quinoa suave",
+        "Chuchu macio",
+        "Abobrinha cozida",
+        "Patinho cozido",
+        "Mandioquinha cremosa"
       ];
 
-      let index = 0;
+      const modeCopy = {
+        livre: {
+          title: "Receita livre",
+          help: "Adicione ingredientes e gere uma receita simples com a combinacao informada.",
+          names: ["Bowl natural", "Prato leve", "Menu fresco", "Receita suave"],
+          note: "Receita livre criada apenas com os ingredientes informados."
+        },
+        personalizada: {
+          title: "Personalizada",
+          help: "Adicione ingredientes especiais e alimentos proibidos. O Bistro completa a receita com bases seguras.",
+          names: ["Bowl personalizado", "Menu sob medida", "Prato do tutor", "Receita particular"],
+          note: "Receita adaptada aos ingredientes especiais e as restricoes informadas."
+        },
+        chef: {
+          title: "Sugestao do chef",
+          help: "Receba uma sugestao automatica elegante, respeitando os alimentos proibidos adicionados.",
+          names: ["Assinatura do chef", "Menu premium", "Bowl particular", "Prato de bistro"],
+          note: "Sugestao premium com combinacao criativa, delicada e digna de chef particular."
+        }
+      };
+
+      const modeSteps = {
+        livre: [
+          "Cozinhe os ingredientes separadamente ate ficarem macios.",
+          "Misture em porcao simples, umida e facil de servir.",
+          "Sirva morno, sem temperos fortes."
+        ],
+        personalizada: [
+          "Prepare primeiro os ingredientes especiais indicados pelo tutor.",
+          "Complete com uma base segura para deixar o bowl equilibrado.",
+          "Finalize em textura macia, ajustada ao porte e rotina do pet."
+        ],
+        chef: [
+          "Cozinhe lentamente para preservar textura, brilho e suavidade.",
+          "Monte o prato em camadas delicadas, como um pequeno menu degustacao.",
+          "Sirva morno, com finalizacao elegante e sem temperos fortes."
+        ]
+      };
+
+      const sessionKeys = {
+        free: "bistropet:session3:free",
+        special: "bistropet:session3:special",
+        blocked: "bistropet:session3:blocked"
+      };
+
+      let activeRecipeMode = "personalizada";
+      let recipeIndex = Number(window.sessionStorage.getItem("bistropet:session3:index") || 0);
+      let freeIngredients = readSessionList(sessionKeys.free);
+      let specialIngredients = readSessionList(sessionKeys.special);
+      let blockedIngredients = readSessionList(sessionKeys.blocked);
+
       const kitchen = document.getElementById("intelligentKitchen");
-      const chips = [...document.querySelectorAll(".ingredient-chip:not(.add-chip)")];
+      const freeInput = document.getElementById("freeIngredientInput");
+      const specialInput = document.getElementById("specialIngredients");
+      const restrictedInput = document.getElementById("restrictedFoods");
+      const freeTags = document.getElementById("freeIngredientTags");
+      const specialTags = document.getElementById("specialIngredientTags");
+      const restrictionList = document.getElementById("restrictionList");
+      const freeWarning = document.getElementById("freeWarning");
+      const customWarning = document.getElementById("customWarning");
 
-      chips.forEach(chip => chip.addEventListener("click", () => chip.classList.toggle("active")));
-      document.querySelectorAll(".mode-pill").forEach(button => {
-        button.addEventListener("click", () => {
-          document.querySelectorAll(".mode-pill").forEach(item => item.classList.remove("active"));
-          button.classList.add("active");
-        });
-      });
-
-      function generateRecipe() {
-        const selected = chips.filter(chip => chip.classList.contains("active")).map(chip => chip.textContent.trim());
-        const recipe = recipes[index % recipes.length];
-        const ingredients = selected.length ? selected.slice(0, 4) : recipe.ingredients;
-        kitchen.classList.add("is-generated");
-        document.getElementById("recipeName").textContent = selected.length > 2
-          ? `Combinação do Bistro com ${ingredients[0].toLowerCase()} e ${ingredients[1].toLowerCase()}`
-          : recipe.title;
-        document.getElementById("recipeDescription").textContent = recipe.description;
-        document.getElementById("resultIngredients").innerHTML = ingredients.map(item => `<li>${item}</li>`).join("");
-        document.getElementById("mealPhoto").src = recipe.image;
-        index += 1;
+      function normalize(value) {
+        return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       }
 
+      function readSessionList(key) {
+        try {
+          const value = window.sessionStorage.getItem(key);
+          return value ? JSON.parse(value) : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function saveSessionList(key, value) {
+        window.sessionStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function cleanItem(value) {
+        return String(value || "").trim().replace(/\s+/g, " ");
+      }
+
+      function splitList(value) {
+        return String(value || "")
+          .split(/[,.;\n]/)
+          .map(cleanItem)
+          .filter(Boolean);
+      }
+
+      function sameIngredient(a, b) {
+        const left = normalize(a);
+        const right = normalize(b);
+        return left && right && (left === right || left.includes(right) || right.includes(left));
+      }
+
+      function uniqueItems(items) {
+        const result = [];
+        items.forEach(item => {
+          const clean = cleanItem(item);
+          if (clean && !result.some(existing => sameIngredient(existing, clean))) result.push(clean);
+        });
+        return result;
+      }
+
+      function isBlocked(ingredient) {
+        return blockedIngredients.some(item => sameIngredient(ingredient, item));
+      }
+
+      function safeItems(items) {
+        return uniqueItems(items).filter(item => !isBlocked(item));
+      }
+
+      function rotate(items, amount) {
+        if (!items.length) return [];
+        return items.map((_, index) => items[(index + amount) % items.length]);
+      }
+
+      function getPetName() {
+        const profile = window.BistroPetStorage ? window.BistroPetStorage.getPetProfile() : {};
+        return profile.name || "Luna";
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "\"": "&quot;",
+          "'": "&#039;"
+        }[char]));
+      }
+
+      function renderTags(container, items, type, isBlockedTag = false) {
+        container.innerHTML = items.map(item => `
+          <span class="restriction-chip${isBlockedTag ? "" : " special-chip"}">
+            ${escapeHtml(item)}
+            <button type="button" aria-label="Remover ${escapeHtml(item)}" data-remove-${type}="${escapeHtml(item)}">×</button>
+          </span>
+        `).join("");
+      }
+
+      function renderState() {
+        renderTags(freeTags, freeIngredients, "free");
+        renderTags(specialTags, specialIngredients, "special");
+        renderTags(restrictionList, blockedIngredients, "blocked", true);
+      }
+
+      function showWarning(mode, message) {
+        const target = mode === "livre" ? freeWarning : customWarning;
+        target.textContent = message;
+      }
+
+      function clearWarnings() {
+        freeWarning.textContent = "";
+        customWarning.textContent = "";
+      }
+
+      function addItems({ input, listName, warningMode }) {
+        const items = splitList(input.value);
+        if (!items.length) return;
+        const targetList = listName === "free" ? freeIngredients : specialIngredients;
+        const nextItems = [];
+
+        for (const item of items) {
+          if (isBlocked(item)) {
+            showWarning(warningMode, `Esse ingrediente foi marcado como proibido para ${getPetName()}.`);
+            continue;
+          }
+          if (!targetList.some(existing => sameIngredient(existing, item))) nextItems.push(item);
+        }
+
+        if (listName === "free") {
+          freeIngredients = uniqueItems([...freeIngredients, ...nextItems]);
+          saveSessionList(sessionKeys.free, freeIngredients);
+        } else {
+          specialIngredients = uniqueItems([...specialIngredients, ...nextItems]);
+          saveSessionList(sessionKeys.special, specialIngredients);
+        }
+
+        input.value = "";
+        renderState();
+      }
+
+      function addBlockedItems() {
+        const items = splitList(restrictedInput.value);
+        if (!items.length) return;
+        blockedIngredients = uniqueItems([...blockedIngredients, ...items]);
+        freeIngredients = freeIngredients.filter(item => !isBlocked(item));
+        specialIngredients = specialIngredients.filter(item => !isBlocked(item));
+        saveSessionList(sessionKeys.blocked, blockedIngredients);
+        saveSessionList(sessionKeys.free, freeIngredients);
+        saveSessionList(sessionKeys.special, specialIngredients);
+        restrictedInput.value = "";
+        clearWarnings();
+        renderState();
+      }
+
+      function removeItem(type, value) {
+        if (type === "free") {
+          freeIngredients = freeIngredients.filter(item => !sameIngredient(item, value));
+          saveSessionList(sessionKeys.free, freeIngredients);
+        }
+        if (type === "special") {
+          specialIngredients = specialIngredients.filter(item => !sameIngredient(item, value));
+          saveSessionList(sessionKeys.special, specialIngredients);
+        }
+        if (type === "blocked") {
+          blockedIngredients = blockedIngredients.filter(item => !sameIngredient(item, value));
+          saveSessionList(sessionKeys.blocked, blockedIngredients);
+        }
+        clearWarnings();
+        renderState();
+      }
+
+      function completePersonalizedIngredients() {
+        const complements = safeItems(rotate(safeCatalog, recipeIndex));
+        return uniqueItems([...safeItems(specialIngredients), ...complements]).slice(0, 4);
+      }
+
+      function chefIngredients() {
+        return safeItems(rotate(safeCatalog, recipeIndex + 3)).slice(0, 4);
+      }
+
+      function buildRecipe(mode) {
+        const name = getPetName();
+        const ingredientsByMode = {
+          livre: safeItems(freeIngredients),
+          personalizada: completePersonalizedIngredients(),
+          chef: chefIngredients()
+        };
+        const ingredients = ingredientsByMode[mode] || [];
+        const copy = modeCopy[mode];
+        const main = ingredients[0] || "base suave";
+        const side = ingredients[1] || "acompanhamento macio";
+
+        return {
+          title: `${copy.names[recipeIndex % copy.names.length]} de ${main.toLowerCase()}${ingredients[1] ? ` com ${side.toLowerCase()}` : ""}`,
+          description: `${copy.note} Criado para ${name} com uma combinacao nova deste modo.`,
+          ingredients,
+          steps: modeSteps[mode],
+          image: mode === "chef" || recipeIndex % 2 ? "./session-3-meal-alt.png" : "./session-3-meal-hero.png",
+          mode
+        };
+      }
+
+      function renderRecipe(recipe) {
+        kitchen.classList.add("is-generated");
+        document.getElementById("recipeName").textContent = recipe.title;
+        document.getElementById("recipeDescription").textContent = recipe.description;
+        document.getElementById("resultIngredients").innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+        document.getElementById("prepSteps").innerHTML = recipe.steps.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+        document.getElementById("mealPhoto").src = recipe.image;
+      }
+
+      function resetRecipeCard() {
+        kitchen.classList.remove("is-generated");
+        document.getElementById("recipeName").textContent = "";
+        document.getElementById("recipeDescription").textContent = "";
+        document.getElementById("resultIngredients").innerHTML = "";
+        document.getElementById("prepSteps").innerHTML = "";
+      }
+
+      function setMode(mode) {
+        activeRecipeMode = mode;
+        document.querySelectorAll(".mode-pill").forEach(button => {
+          button.classList.toggle("active", button.dataset.mode === mode);
+        });
+        document.querySelectorAll(".mode-panel").forEach(panel => {
+          panel.classList.toggle("active", panel.dataset.panel === mode);
+        });
+        document.getElementById("modePanelTitle").textContent = modeCopy[mode].title;
+        document.getElementById("modePanelCopy").textContent = modeCopy[mode].help;
+        document.getElementById("createRecipe").textContent = mode === "chef" ? "Gerar sugestao do chef" : "Criar receita";
+        clearWarnings();
+        resetRecipeCard();
+      }
+
+      function generateRecipe() {
+        clearWarnings();
+
+        if (activeRecipeMode === "livre" && safeItems(freeIngredients).length === 0) {
+          showWarning("livre", "Adicione pelo menos um ingrediente para criar a receita livre.");
+          resetRecipeCard();
+          return;
+        }
+
+        if (activeRecipeMode === "personalizada" && safeItems(specialIngredients).length === 0) {
+          showWarning("personalizada", "Adicione pelo menos um ingrediente especial para criar a receita personalizada.");
+          resetRecipeCard();
+          return;
+        }
+
+        const recipe = buildRecipe(activeRecipeMode);
+        if (!recipe.ingredients.length) {
+          showWarning(activeRecipeMode, "Todos os ingredientes disponiveis foram bloqueados. Remova um alimento proibido para gerar a receita.");
+          resetRecipeCard();
+          return;
+        }
+
+        renderRecipe(recipe);
+        if (window.BistroPetStorage) window.BistroPetStorage.saveLastRecipe(recipe);
+        recipeIndex += 1;
+        window.sessionStorage.setItem("bistropet:session3:index", String(recipeIndex));
+      }
+
+      function refreshProfileCopy() {
+        const name = getPetName();
+        document.querySelector(".chef-pet-card strong").textContent = name;
+        document.querySelector(".bistro-menu h1").textContent = `Hoje vamos criar algo especial para ${name}.`;
+        specialInput.placeholder = `Digite ingredientes importantes para ${name}`;
+      }
+
+      document.getElementById("addFreeIngredient").addEventListener("click", () => {
+        addItems({ input: freeInput, listName: "free", warningMode: "livre" });
+      });
+      document.getElementById("addSpecialIngredient").addEventListener("click", () => {
+        addItems({ input: specialInput, listName: "special", warningMode: "personalizada" });
+      });
+      document.getElementById("addBlockedIngredient").addEventListener("click", addBlockedItems);
+      [freeInput, specialInput, restrictedInput].forEach(input => {
+        input.addEventListener("keydown", event => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (input === freeInput) document.getElementById("addFreeIngredient").click();
+            if (input === specialInput) document.getElementById("addSpecialIngredient").click();
+            if (input === restrictedInput) document.getElementById("addBlockedIngredient").click();
+          }
+        });
+      });
+      document.addEventListener("click", event => {
+        const button = event.target.closest("[data-remove-free], [data-remove-special], [data-remove-blocked]");
+        if (!button) return;
+        if (button.dataset.removeFree) removeItem("free", button.dataset.removeFree);
+        if (button.dataset.removeSpecial) removeItem("special", button.dataset.removeSpecial);
+        if (button.dataset.removeBlocked) removeItem("blocked", button.dataset.removeBlocked);
+      });
+      document.querySelectorAll(".mode-pill").forEach(button => {
+        button.addEventListener("click", () => setMode(button.dataset.mode));
+      });
       document.getElementById("createRecipe").addEventListener("click", generateRecipe);
+      document.getElementById("openWeeklyPlan").addEventListener("click", () => {
+        window.location.href = "./session-4-weekly-plan.html";
+      });
+
+      refreshProfileCopy();
+      renderState();
+      setMode(activeRecipeMode);
     </script>
   </body>
 </html>
