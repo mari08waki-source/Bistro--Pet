@@ -552,6 +552,19 @@ h3 {
   min-height: 82px;
 }
 
+.pet-profile-card .forbidden-card {
+  border: 1px solid rgba(160, 54, 48, 0.24);
+  border-radius: 8px;
+  background: rgba(160, 54, 48, 0.06);
+  color: #9b2f2a;
+  padding: 8px;
+}
+
+.pet-profile-card .forbidden-card textarea {
+  border-color: rgba(160, 54, 48, 0.26);
+  background: rgba(255, 245, 243, 0.92);
+}
+
 .pet-profile-card .primary {
   margin-top: 2px;
   min-height: 48px;
@@ -905,8 +918,40 @@ h3 {
   border-color: rgba(85, 106, 84, 0.22);
 }
 
+.mode-panel .forbidden-card {
+  color: #a65f58;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid rgba(177, 91, 82, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 238, 232, 0.58);
+}
+
+.mode-panel .forbidden-card .ingredient-entry {
+  padding: 2px;
+  border: 1px solid rgba(177, 91, 82, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 250, 247, 0.72);
+}
+
+.mode-panel .forbidden-card .ingredient-entry input {
+  border: 0;
+  background: transparent;
+  padding: 7px 8px;
+}
+
+.mode-panel .forbidden-card .ingredient-entry button {
+  border: 0;
+  background: #efd1c9;
+  color: #8b473e;
+}
+
 .create-chef-recipe {
-  min-height: 48px;
+  min-height: 41px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 26px rgba(85, 106, 84, 0.2);
 }
 
 .chef-result {
@@ -1002,7 +1047,7 @@ h3 {
   max-width: 358px;
   min-height: 455px;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 253, 248, 0.86);
@@ -1172,13 +1217,10 @@ h3 {
 }
 
 .live-recipe-card {
-  position: absolute;
-  z-index: 4;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
-  max-height: calc(100% - 28px);
-  overflow: hidden;
+  display: none;
+  position: static;
+  max-height: none;
+  overflow: visible;
   border: 1px solid rgba(255, 253, 248, 0.42);
   border-radius: 8px;
   background: rgba(255, 253, 248, 0.9);
@@ -1190,13 +1232,18 @@ h3 {
 }
 
 .intelligent-kitchen.is-generated .live-recipe-card {
+  display: block;
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0) scale(1);
 }
 
-.intelligent-kitchen.is-generated .frosted-message {
-  opacity: 0;
+.intelligent-kitchen.is-generated {
+  min-height: 0;
+}
+
+.intelligent-kitchen.is-generated .sleeping-kitchen {
+  display: none;
 }
 
 .live-recipe-card .result-photo {

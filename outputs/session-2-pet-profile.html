@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
@@ -16,7 +16,7 @@
             Bistro Pet
             <span>perfil do pet</span>
           </div>
-          <p>Um cuidado mais íntimo começa conhecendo os pequenos detalhes.</p>
+          <p>Um cuidado mais &iacute;ntimo come&ccedil;a conhecendo os pequenos detalhes.</p>
         </div>
       </section>
 
@@ -28,62 +28,54 @@
 
         <form class="pet-profile-card" id="petProfileForm">
           <label>
-            Nome do pet
-            <input name="name" value="Luna" />
+            Nome do tutor
+            <input name="tutor" />
           </label>
           <label>
-            Nome do tutor
-            <input value="Marina" />
+            Nome do pet
+            <input name="name" />
           </label>
           <div class="field-row">
             <label>
               Idade
-              <input name="age" value="7 anos" />
+              <input name="age" />
             </label>
             <label>
               Peso
-              <input name="weight" value="12 kg" />
+              <input name="weight" />
             </label>
           </div>
           <label>
             Porte
-            <input name="size" value="médio" />
+            <input name="size" />
           </label>
-          <section class="menu-style" aria-label="Estilo do cardápio">
-            <span class="menu-style-title">Estilo do cardápio</span>
+          <section class="menu-style" aria-label="Estilo do card&aacute;pio">
+            <span class="menu-style-title">Estilo do card&aacute;pio</span>
             <input class="mode-radio" type="radio" name="menu-style" id="freeProfile" checked />
             <input class="mode-radio" type="radio" name="menu-style" id="customProfile" />
             <div class="mode-options">
               <label class="mode-option" for="freeProfile">
                 <span>
                   <strong>Perfil Livre</strong>
-                  <small>Para pets sem preferências específicas.</small>
+                  <small>Para pets sem prefer&ecirc;ncias espec&iacute;ficas.</small>
                 </span>
                 <span class="switch" aria-hidden="true"></span>
               </label>
               <label class="mode-option" for="customProfile">
                 <span>
                   <strong>Perfil Personalizado</strong>
-                  <small>Quando existe algum cuidado ou preferência especial.</small>
+                  <small>Quando existe algum cuidado ou prefer&ecirc;ncia especial.</small>
                 </span>
                 <span class="switch" aria-hidden="true"></span>
               </label>
             </div>
-            <div class="custom-note">
+            <div class="custom-note" id="observationCard" hidden>
               <label>
-                Detalhes para o chef
-                <textarea name="notes">Prefere frango. Come melhor à noite.</textarea>
+                Observa&ccedil;&atilde;o
+                <textarea name="notes" placeholder="Ex.: alergia, orienta&ccedil;&atilde;o veterin&aacute;ria ou restri&ccedil;&atilde;o."></textarea>
               </label>
             </div>
           </section>
-          <label>
-            Preferências
-            <textarea name="preferences">Gosta de arroz. Prefere refeições mornas. Ama frango.</textarea>
-          </label>
-          <label>
-            Alergias/restrições
-            <textarea name="restrictions">cebola, alho, uva, chocolate</textarea>
-          </label>
           <button class="primary full" type="button" id="savePetProfile">Salvar perfil</button>
         </form>
       </section>
@@ -92,24 +84,51 @@
     <script>
       const petProfileForm = document.getElementById("petProfileForm");
       const savePetProfileButton = document.getElementById("savePetProfile");
+      const observationCard = document.getElementById("observationCard");
+      const freeProfile = document.getElementById("freeProfile");
+      const customProfile = document.getElementById("customProfile");
+      const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
+
+      function syncProfileModeFields() {
+        observationCard.hidden = !customProfile.checked;
+      }
+
+      function clearNewProfileData() {
+        window.localStorage.removeItem("bistropet:pet-profile");
+        window.localStorage.removeItem("bistropet:global-blocked-ingredients");
+        window.sessionStorage.removeItem("bistropet:session3:free");
+        window.sessionStorage.removeItem("bistropet:session3:special");
+        window.sessionStorage.removeItem("bistropet:session3:blocked");
+        [...petProfileForm.elements].forEach(field => {
+          if (field.matches && field.matches("input:not([type='radio']), textarea")) field.value = "";
+        });
+        freeProfile.checked = true;
+        syncProfileModeFields();
+      }
 
       function fillPetProfileForm() {
+        if (!isEditingProfile) {
+          clearNewProfileData();
+          return;
+        }
         const profile = window.BistroPetStorage.getPetProfile();
         Object.entries(profile).forEach(([key, value]) => {
           const field = petProfileForm.elements[key];
           if (field) field.value = value;
         });
+        document.getElementById(profile.menuStyle === "personalizada" ? "customProfile" : "freeProfile").checked = true;
+        syncProfileModeFields();
       }
 
       function collectPetProfileForm() {
         const data = new FormData(petProfileForm);
         return {
           name: String(data.get("name") || "").trim(),
+          tutor: String(data.get("tutor") || "").trim(),
           size: String(data.get("size") || "").trim(),
           age: String(data.get("age") || "").trim(),
           weight: String(data.get("weight") || "").trim(),
-          preferences: String(data.get("preferences") || "").trim(),
-          restrictions: String(data.get("restrictions") || "").trim(),
+          menuStyle: customProfile.checked ? "personalizada" : "livre",
           notes: String(data.get("notes") || "").trim()
         };
       }
@@ -123,9 +142,36 @@
         window.location.href = "./session-3-meal.html";
       }
 
+      [freeProfile, customProfile].forEach(input => {
+        input.addEventListener("change", () => {
+          syncProfileModeFields();
+          savePetProfile();
+        });
+      });
+      const autoAdvanceFields = [
+        { name: "tutor", next: "name", minimumLength: 2 },
+        { name: "name", next: "age", minimumLength: 2 },
+        { name: "age", next: "weight", minimumLength: 1 },
+        { name: "weight", next: "size", minimumLength: 1 },
+        { name: "size", next: "freeProfile", minimumLength: 3 }
+      ];
+      autoAdvanceFields.forEach(({ name, next, minimumLength }) => {
+        const field = petProfileForm.elements[name];
+        let advanceTimer;
+        field.addEventListener("input", () => {
+          window.clearTimeout(advanceTimer);
+          if (field.value.trim().length < minimumLength) return;
+          advanceTimer = window.setTimeout(() => {
+            if (document.activeElement !== field) return;
+            const nextField = petProfileForm.elements[next] || document.getElementById(next);
+            if (nextField) nextField.focus();
+          }, 700);
+        });
+      });
       petProfileForm.addEventListener("input", savePetProfile);
       savePetProfileButton.addEventListener("click", continueToRecipe);
       fillPetProfileForm();
     </script>
   </body>
 </html>
+

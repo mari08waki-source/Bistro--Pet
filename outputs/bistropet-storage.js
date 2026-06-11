@@ -1,15 +1,18 @@
-(function () {
+﻿(function () {
   const PROFILE_KEY = "bistropet:pet-profile";
   const RECIPE_KEY = "bistropet:last-recipe";
+  const RECIPE_HISTORY_KEY = "bistropet:manual-recipe-history";
   const WEEKLY_PLAN_KEY = "bistropet:weekly-plan";
+  const GLOBAL_BLOCKED_KEY = "bistropet:global-blocked-ingredients";
 
   const defaultProfile = {
     name: "Luna",
     size: "médio",
     age: "7 anos",
-    weight: "12 kg",
-    preferences: "Gosta de arroz. Prefere refeições mornas. Ama frango.",
-    restrictions: "cebola, alho, uva, chocolate",
+  weight: "12 kg",
+  menuStyle: "livre",
+  preferences: "Gosta de arroz. Prefere refeições mornas. Ama frango.",
+    restrictions: "",
     notes: "Prefere frango. Come melhor à noite."
   };
 
@@ -26,8 +29,42 @@
     window.localStorage.setItem(key, JSON.stringify(value));
   }
 
+  function normalize(value) {
+    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  function splitList(value) {
+    return String(value || "")
+      .split(/[,.;\n]/)
+      .map(item => item.trim().replace(/\s+/g, " "))
+      .filter(Boolean);
+  }
+
+  function sameIngredient(a, b) {
+    const left = normalize(a);
+    const right = normalize(b);
+    return left && right && (left === right || left.includes(right) || right.includes(left));
+  }
+
+  function uniqueItems(items) {
+    const result = [];
+    items.forEach(item => {
+      const clean = String(item || "").trim().replace(/\s+/g, " ");
+      if (clean && !result.some(existing => sameIngredient(existing, clean))) result.push(clean);
+    });
+    return result;
+  }
+
   function getPetProfile() {
-    return Object.assign({}, defaultProfile, readJson(PROFILE_KEY, {}));
+    const storedProfile = readJson(PROFILE_KEY, {});
+    const profile = Object.assign({}, defaultProfile, storedProfile);
+    const oldGlobalItems = uniqueItems(readJson(GLOBAL_BLOCKED_KEY, []));
+    if (oldGlobalItems.length && profile.restrictions) {
+      profile.restrictions = splitList(profile.restrictions)
+        .filter(item => !oldGlobalItems.some(globalItem => sameIngredient(item, globalItem)))
+        .join(", ");
+    }
+    return profile;
   }
 
   function savePetProfile(profile) {
@@ -45,6 +82,34 @@
     return recipe;
   }
 
+  function getRecipeHistory() {
+    const history = readJson(RECIPE_HISTORY_KEY, []);
+    return Array.isArray(history) ? history : [];
+  }
+
+  function addRecipeToHistory(recipe) {
+    const history = getRecipeHistory();
+    const historyKey = JSON.stringify([
+      recipe.mode,
+      recipe.title,
+      recipe.ingredients || [],
+      recipe.steps || []
+    ]);
+    const existing = history.find(item => item.historyKey === historyKey);
+    if (existing) return existing;
+    const entry = {
+      historyId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      historyKey,
+      createdAt: new Date().toISOString(),
+      title: recipe.title,
+      mode: recipe.mode,
+      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+      steps: Array.isArray(recipe.steps) ? recipe.steps : []
+    };
+    writeJson(RECIPE_HISTORY_KEY, [entry, ...history]);
+    return entry;
+  }
+
   function getWeeklyPlan() {
     return readJson(WEEKLY_PLAN_KEY, null);
   }
@@ -54,12 +119,26 @@
     return plan;
   }
 
+  function getGlobalBlockedIngredients() {
+    return [];
+  }
+
+  function saveGlobalBlockedIngredients(items) {
+    window.localStorage.removeItem(GLOBAL_BLOCKED_KEY);
+    return [];
+  }
+
   window.BistroPetStorage = {
     getPetProfile,
     savePetProfile,
     getLastRecipe,
     saveLastRecipe,
+    getRecipeHistory,
+    addRecipeToHistory,
     getWeeklyPlan,
-    saveWeeklyPlan
+    saveWeeklyPlan,
+    getGlobalBlockedIngredients,
+    saveGlobalBlockedIngredients
   };
 })();
+
