@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bistro Pet</title>
-    <link rel="stylesheet" href="./styles.css?v=session1-terms-accept" />
+    <link rel="stylesheet" href="./styles.css?v=session1-final-2" />
   </head>
   <body>
     <div class="app-shell onboarding-shell">
@@ -47,21 +47,12 @@
                 Senha
                 <input type="password" value="premium" autocomplete="current-password" />
               </label>
+              <button class="primary full" type="button" id="createProfile">Criar perfil</button>
               <div class="auth-links" aria-label="Ações de acesso">
                 <button type="button">Cadastro</button>
                 <button type="button">Esqueci minha senha</button>
               </div>
-              <div class="consent-list" aria-label="Aceites obrigatórios">
-                <label class="consent-option">
-                  <input type="checkbox" id="acceptTerms" />
-                  <span>Li e aceito os <a href="#">Termos de Uso</a></span>
-                </label>
-                <label class="consent-option">
-                  <input type="checkbox" id="acceptPrivacy" />
-                  <span>Li e aceito a <a href="#">Política de Privacidade</a></span>
-                </label>
-              </div>
-              <button class="primary full" type="button" id="createProfile" disabled>Criar perfil</button>
+              <p class="legal">Ao continuar, você concorda com <a href="#">Privacidade</a> e <a href="#">Termos</a>.</p>
             </div>
           </div>
         </section>
@@ -69,18 +60,14 @@
     </div>
     <script src="./bistropet-storage.js"></script>
     <script>
-      const createProfileButton = document.getElementById("createProfile");
-      const acceptTerms = document.getElementById("acceptTerms");
-      const acceptPrivacy = document.getElementById("acceptPrivacy");
-
-      function updateConsentState() {
-        createProfileButton.disabled = !(acceptTerms.checked && acceptPrivacy.checked);
+      if (window.localStorage.getItem("bistropet:pet-profile")) {
+        window.location.href = "./session-3-meal.html";
       }
 
-      [acceptTerms, acceptPrivacy].forEach(input => input.addEventListener("change", updateConsentState));
-
-      createProfileButton.addEventListener("click", () => {
-        window.location.href = "./session-2-pet-profile.html";
+      document.getElementById("createProfile").addEventListener("click", () => {
+        window.location.href = window.localStorage.getItem("bistropet:pet-profile")
+          ? "./session-3-meal.html"
+          : "./session-2-pet-profile.html";
       });
     </script>
   </body>

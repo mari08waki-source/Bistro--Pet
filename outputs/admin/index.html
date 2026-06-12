@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bistro Pet - Administração</title>
+  <link rel="stylesheet" href="./styles.css?v=production-view" />
+</head>
+<body>
+  <main class="admin-login" id="adminLogin">
+    <section class="login-card">
+      <div class="admin-mark">Bistro Pet <span>Admin</span></div>
+      <p class="eyebrow">Área administrativa</p>
+      <h1>Gestão administrativa do Bistrô.</h1>
+      <p class="muted">Visão compacta e somente leitura dos dados locais.</p>
+      <label>Email administrativo<input type="email" placeholder="admin@bistropet.app" autocomplete="off" /></label>
+      <label>Senha<input type="password" placeholder="••••••••" autocomplete="off" /></label>
+      <button class="primary" type="button" id="previewAdmin">Visualizar estrutura</button>
+    </section>
+  </main>
+  <div class="admin-app" id="adminApp" hidden>
+    <aside class="sidebar">
+      <div class="admin-mark">Bistro Pet <span>Admin</span></div>
+      <nav aria-label="Módulos administrativos">
+        <button class="nav-item active" type="button" data-module="dashboard">Dashboard</button>
+        <button class="nav-item" type="button" data-module="users">Usuários</button>
+        <button class="nav-item" type="button" data-module="pets">Pets</button>
+        <button class="nav-item" type="button" data-module="recipes">Receitas</button>
+        <button class="nav-item" type="button" data-module="weekly">Planos Semanais</button>
+        <button class="nav-item" type="button" data-module="history">Histórico</button>
+        <button class="nav-item" type="button" data-module="logs">Logs e Erros</button>
+        <button class="nav-item" type="button" data-module="settings">Configurações</button>
+        <button class="nav-item" type="button" data-module="backup">Backup / Exportação</button>
+      </nav>
+      <button class="exit-preview" type="button" id="exitPreview">Sair da visualização</button>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><p class="eyebrow">Painel administrativo</p><h1 id="moduleTitle">Dashboard</h1></div>
+        <div class="topbar-actions"><button class="refresh-button" type="button" id="refreshData">Atualizar leitura</button><span class="future-badge">Somente leitura</span></div>
+      </header>
+      <section class="module-panel active" data-panel="dashboard">
+        <div class="metric-grid">
+          <article class="metric-card"><span>Total de receitas criadas</span><strong id="metricCreated">0</strong><small>Receitas recentes disponíveis</small></article>
+          <article class="metric-card"><span>Total de receitas salvas</span><strong id="metricSaved">0</strong><small>Favoritas escolhidas</small></article>
+          <article class="metric-card"><span>Total de planos semanais</span><strong id="metricPlans">0</strong><small>Planos disponíveis</small></article>
+          <article class="metric-card"><span>Perfil do pet</span><strong class="metric-date" id="metricProfile">Não</strong><small>Preenchimento local</small></article>
+          <article class="metric-card"><span>Última atividade</span><strong class="metric-date" id="metricLastActivity">Não registrada</strong><small>Data existente mais recente</small></article>
+          <article class="metric-card"><span>Status geral</span><strong id="metricGeneralStatus">Atenção</strong><small id="lastReadAt">Leitura ainda não realizada</small></article>
+        </div>
+      </section>
+      <section class="module-panel" data-panel="users"><div class="data-grid" id="usersContent"></div></section>
+      <section class="module-panel" data-panel="pets"><div class="data-grid" id="petsContent"></div></section>
+      <section class="module-panel" data-panel="recipes"><div class="data-grid" id="recipesContent"></div></section>
+      <section class="module-panel" data-panel="weekly"><div class="data-grid" id="weeklyContent"></div></section>
+      <section class="module-panel" data-panel="history"><div class="data-grid" id="historyContent"></div></section>
+      <section class="module-panel" data-panel="logs"><div class="data-grid" id="logsContent"></div></section>
+      <section class="module-panel" data-panel="settings"><div class="data-grid" id="settingsContent"></div></section>
+      <section class="module-panel" data-panel="backup">
+        <article class="empty-card export-card"><p class="eyebrow">Backup somente leitura</p><h2>Exportar dados locais</h2><p>Gera uma cópia JSON sem alterar os dados.</p><button class="primary export-button" type="button" id="exportData">Exportar JSON</button></article>
+        <div class="data-grid" id="backupContent"></div>
+      </section>
+    </section>
+  </div>
+  <div class="detail-panel" id="detailPanel" hidden>
+    <section class="detail-dialog" role="dialog" aria-modal="true">
+      <button class="detail-close" id="closeDetail" type="button" aria-label="Fechar">&times;</button>
+      <div id="detailContent"></div>
+    </section>
+  </div>
+  <script src="./admin.js?v=production-view"></script>
+</body>
+</html>

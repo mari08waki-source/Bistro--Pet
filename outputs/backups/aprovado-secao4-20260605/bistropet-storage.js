@@ -1,19 +1,18 @@
 ﻿(function () {
   const PROFILE_KEY = "bistropet:pet-profile";
   const RECIPE_KEY = "bistropet:last-recipe";
-  const RECIPE_HISTORY_KEY = "bistropet:manual-recipe-history";
   const WEEKLY_PLAN_KEY = "bistropet:weekly-plan";
   const GLOBAL_BLOCKED_KEY = "bistropet:global-blocked-ingredients";
 
   const defaultProfile = {
-    name: "",
-    size: "",
-    age: "",
-    weight: "",
-    menuStyle: "livre",
-    preferences: "",
+    name: "Luna",
+    size: "médio",
+    age: "7 anos",
+  weight: "12 kg",
+  menuStyle: "livre",
+  preferences: "Gosta de arroz. Prefere refeições mornas. Ama frango.",
     restrictions: "",
-    notes: ""
+    notes: "Prefere frango. Come melhor à noite."
   };
 
   function readJson(key, fallback) {
@@ -82,34 +81,6 @@
     return recipe;
   }
 
-  function getRecipeHistory() {
-    const history = readJson(RECIPE_HISTORY_KEY, []);
-    return Array.isArray(history) ? history : [];
-  }
-
-  function addRecipeToHistory(recipe) {
-    const history = getRecipeHistory();
-    const historyKey = JSON.stringify([
-      recipe.mode,
-      recipe.title,
-      recipe.ingredients || [],
-      recipe.steps || []
-    ]);
-    const existing = history.find(item => item.historyKey === historyKey);
-    if (existing) return existing;
-    const entry = {
-      historyId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      historyKey,
-      createdAt: new Date().toISOString(),
-      title: recipe.title,
-      mode: recipe.mode,
-      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-      steps: Array.isArray(recipe.steps) ? recipe.steps : []
-    };
-    writeJson(RECIPE_HISTORY_KEY, [entry, ...history]);
-    return entry;
-  }
-
   function getWeeklyPlan() {
     return readJson(WEEKLY_PLAN_KEY, null);
   }
@@ -133,8 +104,6 @@
     savePetProfile,
     getLastRecipe,
     saveLastRecipe,
-    getRecipeHistory,
-    addRecipeToHistory,
     getWeeklyPlan,
     saveWeeklyPlan,
     getGlobalBlockedIngredients,

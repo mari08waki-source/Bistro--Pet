@@ -28,12 +28,12 @@
 
         <form class="pet-profile-card" id="petProfileForm">
           <label>
-            Nome do tutor
-            <input name="tutor" />
-          </label>
-          <label>
             Nome do pet
             <input name="name" />
+          </label>
+          <label>
+            Nome do tutor
+            <input name="tutor" />
           </label>
           <div class="field-row">
             <label>
@@ -69,30 +69,70 @@
                 <span class="switch" aria-hidden="true"></span>
               </label>
             </div>
-            <div class="custom-note" id="observationCard" hidden>
+            <div class="custom-note">
               <label>
-                Observa&ccedil;&atilde;o
-                <textarea name="notes" placeholder="Ex.: alergia, orienta&ccedil;&atilde;o veterin&aacute;ria ou restri&ccedil;&atilde;o."></textarea>
+                Detalhes para o chef
+                <textarea name="notes"></textarea>
               </label>
             </div>
           </section>
+          <label id="preferencesField">
+            Prefer&ecirc;ncias
+            <textarea name="preferences"></textarea>
+          </label>
+          <label class="forbidden-card">
+            Alimentos proibidos
+            <textarea name="restrictions"></textarea>
+          </label>
           <button class="primary full" type="button" id="savePetProfile">Salvar perfil</button>
         </form>
       </section>
     </main>
-    <script src="./bistropet-storage.js?v=clean-profile-state"></script>
+    <script src="./bistropet-storage.js"></script>
     <script>
       const petProfileForm = document.getElementById("petProfileForm");
       const savePetProfileButton = document.getElementById("savePetProfile");
-      const observationCard = document.getElementById("observationCard");
-      const observationField = petProfileForm.elements.notes;
+      const preferencesField = document.getElementById("preferencesField");
       const freeProfile = document.getElementById("freeProfile");
       const customProfile = document.getElementById("customProfile");
       const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
 
+      function normalize(value) {
+        return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      }
+
+      function extractKnownIngredients(value) {
+        const text = normalize(value);
+        const knownFoods = [
+          { ingredient: "batata doce", aliases: ["batata doce"] },
+          { ingredient: "abóbora", aliases: ["abobora", "abóbora"] },
+          { ingredient: "cenoura", aliases: ["cenoura"] },
+          { ingredient: "chuchu", aliases: ["chuchu"] },
+          { ingredient: "frango", aliases: ["frango"] },
+          { ingredient: "arroz", aliases: ["arroz"] },
+          { ingredient: "peixe", aliases: ["peixe"] },
+          { ingredient: "ovo", aliases: ["ovo", "ovos"] },
+          { ingredient: "quinoa", aliases: ["quinoa"] },
+          { ingredient: "abobrinha", aliases: ["abobrinha"] },
+          { ingredient: "patinho", aliases: ["patinho"] },
+          { ingredient: "mandioquinha", aliases: ["mandioquinha"] }
+        ];
+
+        return knownFoods
+          .filter(food => food.aliases.some(alias => text.includes(normalize(alias))))
+          .map(food => food.ingredient);
+      }
+
+      function splitBlockedFoods(value) {
+        const clean = String(value || "").trim().replace(/\s+/g, " ");
+        if (!clean) return [];
+        if (/[,.;\n]/.test(clean)) return clean.split(/[,.;\n]/).map(item => item.trim()).filter(Boolean);
+        const known = extractKnownIngredients(clean);
+        return known.length ? known : [clean];
+      }
+
       function syncProfileModeFields() {
-        observationCard.hidden = !customProfile.checked;
-        if (!customProfile.checked) observationField.value = "";
+        preferencesField.hidden = customProfile.checked;
       }
 
       function clearNewProfileData() {
@@ -131,17 +171,25 @@
           age: String(data.get("age") || "").trim(),
           weight: String(data.get("weight") || "").trim(),
           menuStyle: customProfile.checked ? "personalizada" : "livre",
-          notes: customProfile.checked ? String(data.get("notes") || "").trim() : ""
+          preferences: customProfile.checked ? "" : String(data.get("preferences") || "").trim(),
+          restrictions: String(data.get("restrictions") || "").trim(),
+          notes: String(data.get("notes") || "").trim()
         };
       }
 
       function savePetProfile() {
-        window.BistroPetStorage.savePetProfile(collectPetProfileForm());
+        const profile = collectPetProfileForm();
+        window.BistroPetStorage.savePetProfile(profile);
+        if (window.BistroPetStorage.saveGlobalBlockedIngredients) {
+          window.BistroPetStorage.saveGlobalBlockedIngredients(
+            splitBlockedFoods(profile.restrictions)
+          );
+        }
       }
 
       function continueToRecipe() {
         savePetProfile();
-        window.location.href = `./session-3-meal.html?v=visible-blocked-list-${Date.now()}`;
+        window.location.href = "./session-3-meal.html";
       }
 
       [freeProfile, customProfile].forEach(input => {
@@ -150,24 +198,14 @@
           savePetProfile();
         });
       });
-      const autoAdvanceFields = [
-        { name: "tutor", next: "name", minimumLength: 2 },
-        { name: "name", next: "age", minimumLength: 2 },
-        { name: "age", next: "weight", minimumLength: 1 },
-        { name: "weight", next: "size", minimumLength: 1 },
-        { name: "size", next: "freeProfile", minimumLength: 3 }
-      ];
-      autoAdvanceFields.forEach(({ name, next, minimumLength }) => {
+      const focusOrder = ["name", "tutor", "age", "weight", "size"];
+      focusOrder.forEach((name, index) => {
         const field = petProfileForm.elements[name];
-        let advanceTimer;
-        field.addEventListener("input", () => {
-          window.clearTimeout(advanceTimer);
-          if (field.value.trim().length < minimumLength) return;
-          advanceTimer = window.setTimeout(() => {
-            if (document.activeElement !== field) return;
-            const nextField = petProfileForm.elements[next] || document.getElementById(next);
-            if (nextField) nextField.focus();
-          }, 700);
+        field.addEventListener("keydown", event => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          const nextField = petProfileForm.elements[focusOrder[index + 1]];
+          if (nextField) nextField.focus();
         });
       });
       petProfileForm.addEventListener("input", savePetProfile);
