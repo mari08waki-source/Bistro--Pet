@@ -256,23 +256,8 @@
       </section>
     </div>
 
-    <script src="./bistropet-storage.js?v=clean-profile-state"></script>
+    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
     <script>
-      const safeCatalog = [
-        "Frango desfiado",
-        "Arroz macio",
-        "Abóbora cozida",
-        "Peixe em lascas",
-        "Batata doce",
-        "Cenoura delicada",
-        "Ovos cozidos",
-        "Quinoa suave",
-        "Chuchu macio",
-        "Abobrinha cozida",
-        "Patinho cozido",
-        "Mandioquinha cremosa"
-      ];
-
       const modeCopy = {
         livre: {
           title: "Receita livre",
@@ -391,10 +376,13 @@
       let specialIngredients = [];
       let profilePersonalizedBlockedIngredients = personalizedProfileBlockedItems();
       let personalizedBlockedIngredients = [...profilePersonalizedBlockedIngredients];
+      let currentPersonalizedBlockedIngredients = [];
+      let currentFreeBlockedIngredients = [];
       let blockedIngredients = uniqueItems([
         ...profileBlockedItems(),
-        ...(window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients ? window.BistroPetStorage.getGlobalBlockedIngredients() : []),
-        ...readSessionList(sessionKeys.blocked)
+        ...(window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients
+          ? window.BistroPetStorage.getGlobalBlockedIngredients()
+          : [])
       ]);
 
       const kitchen = document.getElementById("intelligentKitchen");
@@ -441,96 +429,61 @@
       }
 
       function splitBlockedList(value) {
-        const clean = cleanItem(value);
-        if (!clean) return [];
-        const listed = splitList(clean);
-        if (listed.length > 1 || /[,.;\n]/.test(clean)) return listed;
-        const knownItems = extractProfileIngredients(clean);
-        return knownItems.length ? knownItems : [clean];
+        return splitList(value);
       }
 
       function splitPersonalizedList(value) {
-        const clean = cleanItem(value);
-        if (!clean) return [];
-        const listed = splitList(clean);
-        if (listed.length > 1 || /[,.;\n]/.test(clean)) {
-          return listed.flatMap(splitPersonalizedList);
-        }
-        const protectedPhrases = ["batata doce", "carne bovina"];
-        let remaining = clean;
-        const phrases = [];
-        protectedPhrases.forEach((phrase, index) => {
-          const pattern = new RegExp(`\\b${phrase}\\b`, "i");
-          if (!pattern.test(remaining)) return;
-          phrases.push(phrase.replace(/\b\w/g, letter => letter.toUpperCase()));
-          remaining = remaining.replace(pattern, ` phrase${index} `);
-        });
-        return uniqueItems([
-          ...phrases,
-          ...remaining.split(/\s+/).filter(item => !/^phrase\d+$/.test(item)).map(cleanItem)
-        ]);
-      }
-
-      function extractProfileIngredients(value) {
-        const text = normalize(value);
-        const profileFoods = [
-          { ingredient: "Frango", aliases: ["frango"] },
-          { ingredient: "Carne", aliases: ["carne"] },
-          { ingredient: "Arroz", aliases: ["arroz"] },
-          { ingredient: "Abóbora", aliases: ["abóbora", "abóbora"] },
-          { ingredient: "Peixe", aliases: ["peixe"] },
-          { ingredient: "Batata doce", aliases: ["batata doce"] },
-          { ingredient: "Mandioca", aliases: ["mandioca", "aipim", "macaxeira"] },
-          { ingredient: "Pepino", aliases: ["pepino"] },
-          { ingredient: "Cenoura", aliases: ["cenoura"] },
-          { ingredient: "Ovos", aliases: ["ovo", "ovos"] },
-          { ingredient: "Quinoa", aliases: ["quinoa"] },
-          { ingredient: "Chuchu", aliases: ["chuchu"] },
-          { ingredient: "Abobrinha", aliases: ["abobrinha"] },
-          { ingredient: "Patinho", aliases: ["patinho"] },
-          { ingredient: "Mandioquinha", aliases: ["mandioquinha"] }
-        ];
-
-        return profileFoods
-          .filter(food => food.aliases.some(alias => text.includes(normalize(alias))))
-          .map(food => food.ingredient);
+        return splitList(value);
       }
 
       function profileBlockedItems() {
-        if (!window.BistroPetStorage) return [];
-        const profile = window.BistroPetStorage.getPetProfile ? window.BistroPetStorage.getPetProfile() : {};
-        const globalItems = window.BistroPetStorage.getGlobalBlockedIngredients ? window.BistroPetStorage.getGlobalBlockedIngredients() : [];
-        return uniqueItems([...splitBlockedList(profile.restrictions), ...globalItems.flatMap(splitBlockedList)]);
+        return window.BistroPetStorage ? window.BistroPetStorage.getOfficialRestrictions() : [];
       }
 
       function personalizedProfileBlockedItems() {
-        if (!window.BistroPetStorage) return [];
-        const profile = window.BistroPetStorage.getPetProfile ? window.BistroPetStorage.getPetProfile() : {};
-        return uniqueItems([
-          ...splitBlockedList(profile.restrictions),
-          ...splitPersonalizedList(profile.notes)
+        return window.BistroPetStorage ? window.BistroPetStorage.getOfficialRestrictions() : [];
+      }
+
+      function syncRestrictionsFromProfile() {
+        const officialRestrictions = window.BistroPetStorage && window.BistroPetStorage.getOfficialRestrictions
+          ? window.BistroPetStorage.getOfficialRestrictions()
+          : personalizedProfileBlockedItems();
+        profilePersonalizedBlockedIngredients = [...officialRestrictions];
+        personalizedBlockedIngredients = uniqueItems([
+          ...officialRestrictions,
+          ...currentPersonalizedBlockedIngredients
+        ]);
+        blockedIngredients = uniqueItems([
+          ...officialRestrictions,
+          ...(window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients
+            ? window.BistroPetStorage.getGlobalBlockedIngredients()
+            : [])
         ]);
       }
 
       function syncPersonalizedProfileBlockedItems() {
-        if (profilePersonalizedBlockedIngredients.length || personalizedBlockedIngredients.length) return;
-        profilePersonalizedBlockedIngredients = personalizedProfileBlockedItems();
-        personalizedBlockedIngredients = [...profilePersonalizedBlockedIngredients];
+        syncRestrictionsFromProfile();
       }
 
       function splitFreeList(value) {
-        return splitPersonalizedList(value);
+        const listed = splitPersonalizedList(value);
+        if (listed.length !== 1 || /[,.;\n]/.test(String(value || ""))) return listed;
+        const clean = cleanItem(value);
+        if (!clean || !/\s/.test(clean)) return listed;
+        return clean.split(/\s+/).map(cleanItem).filter(Boolean);
       }
 
       function sameIngredient(a, b) {
         const left = normalize(a);
         const right = normalize(b);
-        if (!left || !right) return false;
-        if (left === right) return true;
-        const preparationWords = /\b(cozido|cozida|cozidos|cozidas|desfiado|desfiada|macio|macia|cremoso|cremosa|delicado|delicada|fresco|fresca|em lascas|pure de)\b/g;
-        const baseLeft = left.replace(preparationWords, "").replace(/\s+/g, " ").trim();
-        const baseRight = right.replace(preparationWords, "").replace(/\s+/g, " ").trim();
-        return baseLeft === baseRight;
+        return Boolean(left && right && left === right);
+      }
+
+      function preparedIngredientName(value) {
+        return normalize(value)
+          .replace(/\b(desfiado|desfiada|cozido|cozida|cozidos|cozidas|macio|macia|suave|delicado|delicada|fresco|fresca|em lascas)\b/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
       }
 
       function uniqueItems(items) {
@@ -543,7 +496,10 @@
       }
 
       function isBlocked(ingredient) {
-        return blockedIngredients.some(item => sameIngredient(ingredient, item));
+        const preparedName = preparedIngredientName(ingredient);
+        return blockedIngredients.some(item =>
+          sameIngredient(ingredient, item) || preparedName === normalize(item)
+        );
       }
 
       function isPersonalizedBlocked(ingredient) {
@@ -632,7 +588,7 @@
       function renderState() {
         renderTags(freeTags, freeIngredients, "free");
         renderTags(specialTags, specialIngredients, "special");
-        renderTags(freeRestrictionList, blockedIngredients, "blocked", true);
+        renderTags(freeRestrictionList, currentFreeBlockedIngredients, "blocked", true);
         renderTags(restrictionList, personalizedBlockedIngredients, "personalized-blocked", true);
       }
 
@@ -640,6 +596,8 @@
         specialIngredients = [];
         specialInput.value = "";
         restrictedInput.value = "";
+        currentPersonalizedBlockedIngredients = [];
+        syncRestrictionsFromProfile();
         saveSessionList(sessionKeys.special, []);
         saveSessionList(sessionKeys.blocked, []);
         specialTags.replaceChildren();
@@ -684,32 +642,52 @@
 
       function saveBlockedIngredients() {
         blockedIngredients = uniqueItems(blockedIngredients);
-        saveSessionList(sessionKeys.blocked, []);
-        if (window.BistroPetStorage) {
-          window.BistroPetStorage.savePetProfile({ restrictions: blockedIngredients.join(", ") });
-          if (window.BistroPetStorage.saveGlobalBlockedIngredients) {
-            window.BistroPetStorage.saveGlobalBlockedIngredients(blockedIngredients);
-          }
+        if (window.BistroPetStorage && window.BistroPetStorage.saveGlobalBlockedIngredients) {
+          const officialRestrictions = profileBlockedItems();
+          const manualRestrictions = blockedIngredients.filter(item =>
+            !officialRestrictions.some(official => sameIngredient(item, official))
+          );
+          window.BistroPetStorage.saveGlobalBlockedIngredients(manualRestrictions);
         }
       }
 
       function addBlockedItems(input = restrictedInput) {
         if (!input || !("value" in input)) input = restrictedInput;
-        const items = input === restrictedInput ? splitPersonalizedList(input.value) : splitBlockedList(input.value);
-        if (!items.length) return;
-        if (input === restrictedInput) {
-          personalizedBlockedIngredients = uniqueItems([...personalizedBlockedIngredients, ...items]);
-          specialIngredients = specialIngredients.filter(item => !isPersonalizedBlocked(item));
+        if (input === freeRestrictedInput) {
+          const items = splitBlockedList(input.value);
+          currentFreeBlockedIngredients = uniqueItems([...currentFreeBlockedIngredients, ...items]);
+          blockedIngredients = uniqueItems([...blockedIngredients, ...items]);
+          freeIngredients = freeIngredients.filter(item => !isBlocked(item));
+          saveSessionList(sessionKeys.free, freeIngredients);
+          saveBlockedIngredients();
           input.value = "";
           clearWarnings();
           renderState();
           return;
         }
-        blockedIngredients = uniqueItems([...blockedIngredients, ...items]);
-        freeIngredients = freeIngredients.filter(item => !isBlocked(item));
-        saveBlockedIngredients();
-        saveSessionList(sessionKeys.free, freeIngredients);
+        if (input === restrictedInput) {
+          const items = splitBlockedList(input.value);
+          currentPersonalizedBlockedIngredients = uniqueItems([
+            ...currentPersonalizedBlockedIngredients,
+            ...items
+          ]);
+          personalizedBlockedIngredients = uniqueItems([
+            ...profilePersonalizedBlockedIngredients,
+            ...currentPersonalizedBlockedIngredients
+          ]);
+          blockedIngredients = uniqueItems([...blockedIngredients, ...items]);
+          saveBlockedIngredients();
+          specialIngredients = specialIngredients.filter(item => !isPersonalizedBlocked(item));
+          saveSessionList(sessionKeys.special, specialIngredients);
+          input.value = "";
+          clearWarnings();
+          renderState();
+          return;
+        }
         input.value = "";
+        syncRestrictionsFromProfile();
+        specialIngredients = specialIngredients.filter(item => !isPersonalizedBlocked(item));
+        freeIngredients = freeIngredients.filter(item => !isBlocked(item));
         clearWarnings();
         renderState();
       }
@@ -724,23 +702,36 @@
           saveSessionList(sessionKeys.special, specialIngredients);
         }
         if (type === "blocked") {
-          blockedIngredients = blockedIngredients.filter(item => !sameIngredient(item, value));
-          saveBlockedIngredients();
+          currentFreeBlockedIngredients = currentFreeBlockedIngredients.filter(item => !sameIngredient(item, value));
+          const manualRestrictions = window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients
+            ? window.BistroPetStorage.getGlobalBlockedIngredients()
+            : [];
+          if (window.BistroPetStorage && window.BistroPetStorage.saveGlobalBlockedIngredients) {
+            window.BistroPetStorage.saveGlobalBlockedIngredients(
+              manualRestrictions.filter(item => !sameIngredient(item, value))
+            );
+          }
+          syncRestrictionsFromProfile();
         }
         if (type === "personalized-blocked") {
-          personalizedBlockedIngredients = personalizedBlockedIngredients.filter(item => !sameIngredient(item, value));
+          currentPersonalizedBlockedIngredients = currentPersonalizedBlockedIngredients.filter(item =>
+            !sameIngredient(item, value)
+          );
+          const officialRestrictions = profileBlockedItems();
+          const isOfficialRestriction = officialRestrictions.some(item => sameIngredient(item, value));
+          if (!isOfficialRestriction && window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients && window.BistroPetStorage.saveGlobalBlockedIngredients) {
+            window.BistroPetStorage.saveGlobalBlockedIngredients(
+              window.BistroPetStorage.getGlobalBlockedIngredients().filter(item => !sameIngredient(item, value))
+            );
+          }
+          syncRestrictionsFromProfile();
         }
         clearWarnings();
         renderState();
       }
 
       function completePersonalizedIngredients() {
-        const required = uniqueItems(specialIngredients).filter(item => !isPersonalizedBlocked(item));
-        const complements = rotate(safeCatalog, recipeIndex)
-          .map(simpleIngredientName)
-          .filter(item => !isPersonalizedBlocked(item))
-          .filter(item => !required.some(requiredItem => sameIngredient(requiredItem, item)));
-        return uniqueItems([...required, ...complements]).slice(0, Math.max(4, required.length));
+        return uniqueItems(specialIngredients).filter(item => !isPersonalizedBlocked(item));
       }
 
       function formatFreeIngredient(item) {
@@ -755,15 +746,12 @@
 
       function completeFreeIngredients() {
         const selected = safeItems(freeIngredients).map(formatFreeIngredient);
-        if (selected.length) return uniqueItems(selected);
-        const complements = safeItems(rotate(safeCatalog, recipeIndex));
-        return uniqueItems(complements).slice(0, 4);
+        return uniqueItems(selected);
       }
 
       function chefIngredients() {
         const menu = chefMenus[recipeIndex % chefMenus.length];
-        const fallback = safeItems(rotate(safeCatalog, recipeIndex + menu.ingredients.length));
-        return uniqueItems([...safeItems(menu.ingredients), ...fallback]).slice(0, 4);
+        return uniqueItems(safeItems(menu.ingredients));
       }
 
       function chefSteps() {
@@ -891,12 +879,7 @@
 
       function personalizedRecipeHasBlockedContent(recipe) {
         if (!recipe || recipe.mode !== "personalizada") return false;
-        return [
-          recipe.title,
-          recipe.description,
-          ...(recipe.ingredients || []),
-          ...(recipe.steps || [])
-        ].some(value => isPersonalizedBlocked(value));
+        return (recipe.ingredients || []).some(value => isPersonalizedBlocked(value));
       }
 
       function generationTypeForMode(mode) {
@@ -1010,6 +993,8 @@
 
       function generateRecipe() {
         clearWarnings();
+        syncRestrictionsFromProfile();
+        renderState();
 
         if (activeRecipeMode === "personalizada" && restrictedInput.value.trim()) {
           addBlockedItems(restrictedInput);
@@ -1040,8 +1025,10 @@
         window.sessionStorage.setItem("bistropet:session3:index", String(recipeIndex));
         if (activeRecipeMode === "livre") {
           freeIngredients = [];
+          currentFreeBlockedIngredients = [];
           freeInput.value = "";
           saveSessionList(sessionKeys.free, []);
+          syncRestrictionsFromProfile();
           renderState();
         }
         if (activeRecipeMode === "personalizada") {

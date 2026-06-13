@@ -89,7 +89,6 @@
       const freeProfile = document.getElementById("freeProfile");
       const customProfile = document.getElementById("customProfile");
       const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
-
       function syncProfileModeFields() {
         observationCard.hidden = !customProfile.checked;
         if (!customProfile.checked) observationField.value = "";
@@ -97,10 +96,14 @@
 
       function clearNewProfileData() {
         window.localStorage.removeItem("bistropet:pet-profile");
+        window.localStorage.removeItem("bistropet:last-recipe");
+        window.localStorage.removeItem("bistropet:manual-recipe-history");
+        window.localStorage.removeItem("bistropet:weekly-plan");
         window.localStorage.removeItem("bistropet:global-blocked-ingredients");
         window.sessionStorage.removeItem("bistropet:session3:free");
         window.sessionStorage.removeItem("bistropet:session3:special");
         window.sessionStorage.removeItem("bistropet:session3:blocked");
+        window.sessionStorage.removeItem("bistropet:session3:index");
         [...petProfileForm.elements].forEach(field => {
           if (field.matches && field.matches("input:not([type='radio']), textarea")) field.value = "";
         });
@@ -136,7 +139,8 @@
       }
 
       function savePetProfile() {
-        window.BistroPetStorage.savePetProfile(collectPetProfileForm());
+        const savedProfile = window.BistroPetStorage.savePetProfile(collectPetProfileForm());
+        observationField.value = savedProfile.notes || "";
       }
 
       function continueToRecipe() {

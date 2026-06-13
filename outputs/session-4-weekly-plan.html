@@ -104,7 +104,7 @@
       </section>
     </main>
 
-    <script src="./bistropet-storage.js"></script>
+    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
     <script>
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
@@ -191,6 +191,7 @@
         ["vagem", "Vagem"],
         ["beterraba", "Beterraba"],
         ["couve", "Couve"],
+        ["selga", "Selga"],
         ["mandioquinha", "Mandioquinha"]
       ];
       const planNames = ["Bowl leve", "Menu delicado", "Prato bistrô", "Combinação suave", "Receita aconchegante"];
@@ -216,7 +217,7 @@
       ];
       const weeklyCatalog = {
         protein: ["Frango", "Peixe", "Patinho", "Ovos", "Peru", "Tilápia", "Carne bovina"],
-        base: ["Arroz", "Mandioquinha", "Mandioca", "Batata doce", "Quinoa", "Inhame", "Aveia"],
+        base: ["Arroz", "Mandioquinha", "Mandioca", "Batata", "Batata doce", "Quinoa", "Inhame", "Aveia"],
         vegetable: ["Abobrinha", "Chuchu", "Abóbora", "Cenoura", "Pepino", "Vagem", "Couve"]
       };
 
@@ -266,9 +267,12 @@
       }
 
       function restrictionTerms(profile) {
+        if (!window.BistroPetStorage) return [];
         return uniqueIngredients([
-          ...extractIngredientTerms(profile.restrictions),
-          ...splitList(profile.restrictions)
+          ...window.BistroPetStorage.getOfficialRestrictions(),
+          ...(window.BistroPetStorage.getGlobalBlockedIngredients
+            ? window.BistroPetStorage.getGlobalBlockedIngredients()
+            : [])
         ]);
       }
 
@@ -280,9 +284,6 @@
       }
 
       function saveProfileBlockedIngredients(items) {
-        window.BistroPetStorage.savePetProfile({
-          restrictions: uniqueIngredients(items).join(", ")
-        });
         try {
           window.localStorage.removeItem("bistropet:global-blocked-ingredients");
         } catch (error) {}
@@ -292,10 +293,8 @@
         const cleanIngredient = normalize(ingredient);
         return restrictions.some(item => {
           const cleanRestriction = normalize(item);
-          if (!cleanRestriction) return false;
-          if (cleanIngredient.includes(cleanRestriction) || cleanRestriction.includes(cleanIngredient)) return true;
-          if ((cleanRestriction.includes("carne") || cleanRestriction.includes("bovina")) && ["patinho", "carne", "carne bovina"].includes(cleanIngredient)) return true;
-          return false;
+          if (!cleanIngredient || !cleanRestriction) return false;
+          return cleanIngredient === cleanRestriction;
         });
       }
 
@@ -310,10 +309,7 @@
       function uniqueIngredients(items) {
         return items.map(item => String(item || "").trim()).filter(Boolean).filter((item, itemIndex, list) => {
           const cleanItem = normalize(item);
-          return list.findIndex(candidate => {
-            const cleanCandidate = normalize(candidate);
-            return cleanCandidate === cleanItem || cleanCandidate.includes(cleanItem) || cleanItem.includes(cleanCandidate);
-          }) === itemIndex;
+          return list.findIndex(candidate => normalize(candidate) === cleanItem) === itemIndex;
         });
       }
 
@@ -407,7 +403,7 @@
       function ingredientCategory(ingredient) {
         const cleanIngredient = normalize(ingredient);
         if (["frango", "peixe", "patinho", "ovos", "ovo", "carne", "peru", "tilapia", "salmao"].some(term => cleanIngredient.includes(term))) return "protein";
-        if (["arroz", "racao", "ração", "mandioquinha", "mandioca", "aipim", "macaxeira", "batata doce", "quinoa", "inhame", "aveia"].some(term => cleanIngredient.includes(term))) return "base";
+        if (["arroz", "racao", "ração", "mandioquinha", "mandioca", "aipim", "macaxeira", "batata doce", "batata", "quinoa", "inhame", "aveia"].some(term => cleanIngredient.includes(term))) return "base";
         if (["abobrinha", "chuchu", "abobora", "cenoura", "pepino", "vagem", "beterraba", "couve"].some(term => cleanIngredient.includes(term))) return "vegetable";
         return "";
       }
@@ -476,31 +472,36 @@
         const safeComplements = [...weeklyCatalog.protein, ...weeklyCatalog.base, ...weeklyCatalog.vegetable]
           .filter(item => !isRestricted(item, restrictions))
           .filter(item => !pool.some(existing => normalize(existing) === normalize(item)));
-        while (pool.length < 4 && safeComplements.length) pool.push(safeComplements.shift());
+        while (safeComplements.length) pool.push(safeComplements.shift());
         return pool;
       }
 
       function customWeeklyIngredients({ pool, activeRestrictions, dayIndex, usedCombinations }) {
-        const allowed = customAllowedPool(pool, activeRestrictions);
-        if (!allowed.length) return [];
-        const targetSize = Math.min(4, allowed.length);
-        for (let attempt = 0; attempt < 21; attempt += 1) {
-          const ingredients = [];
-          for (let offset = 0; offset < targetSize; offset += 1) {
-            const item = allowed[(dayIndex + attempt + offset) % allowed.length];
-            if (item && !ingredients.some(existing => normalize(existing) === normalize(item))) ingredients.push(item);
+        const preferred = uniqueIngredients(pool).filter(item => !isRestricted(item, activeRestrictions));
+        const proteins = safeCatalog("protein", activeRestrictions, 0);
+        const bases = safeCatalog("base", activeRestrictions, 0);
+        const vegetables = safeCatalog("vegetable", activeRestrictions, 0);
+        for (let attempt = 0; attempt < 49; attempt += 1) {
+          const ingredients = uniqueIngredients([
+            proteins[(dayIndex + attempt) % proteins.length],
+            bases[(dayIndex * 2 + attempt + 1) % bases.length],
+            vegetables[(dayIndex * 3 + attempt + 2) % vegetables.length]
+          ]).filter(Boolean);
+          const preferredItem = preferred[dayIndex % preferred.length];
+          if (preferredItem && !ingredients.some(item => ingredientCategory(item) === ingredientCategory(preferredItem))) {
+            ingredients.push(preferredItem);
           }
           const key = recipeKey(ingredients);
-          if (ingredients.length === targetSize && !usedCombinations.has(key)) {
+          if (ingredients.length >= 3 && !usedCombinations.has(key)) {
             usedCombinations.add(key);
             return ingredients;
           }
         }
-        const fallback = [];
-        for (let offset = 0; offset < targetSize; offset += 1) {
-          const item = allowed[(dayIndex + offset) % allowed.length];
-          if (item && !fallback.some(existing => normalize(existing) === normalize(item))) fallback.push(item);
-        }
+        const fallback = uniqueIngredients([
+          proteins[dayIndex % proteins.length],
+          bases[(dayIndex + 1) % bases.length],
+          vegetables[(dayIndex + 2) % vegetables.length]
+        ]).filter(Boolean);
         usedCombinations.add(recipeKey(fallback));
         return fallback;
       }
@@ -553,14 +554,9 @@
       }
 
       function weeklySourceIngredients(profile, customMode) {
-        const lastRecipe = window.BistroPetStorage.getLastRecipe ? (window.BistroPetStorage.getLastRecipe() || {}) : {};
-        if (customMode && lastRecipe.mode === "personalizada") {
-          return uniqueIngredients(lastRecipe.ingredients || []);
-        }
         return uniqueIngredients([
-          ...extractIngredientTerms(profile.preferences),
-          ...extractIngredientTerms(profile.notes),
-          ...extractIngredientTerms((lastRecipe.ingredients || []).join(", "))
+          ...customIngredients,
+          ...extractIngredientTerms(profile.preferences)
         ]);
       }
 

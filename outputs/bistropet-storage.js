@@ -4,6 +4,7 @@
   const RECIPE_HISTORY_KEY = "bistropet:manual-recipe-history";
   const WEEKLY_PLAN_KEY = "bistropet:weekly-plan";
   const GLOBAL_BLOCKED_KEY = "bistropet:global-blocked-ingredients";
+  const PROFILE_SCHEMA_VERSION = 2;
 
   const defaultProfile = {
     name: "",
@@ -13,7 +14,10 @@
     menuStyle: "livre",
     preferences: "",
     restrictions: "",
-    notes: ""
+    notes: "",
+    schemaVersion: PROFILE_SCHEMA_VERSION,
+    revision: 0,
+    updatedAt: ""
   };
 
   function readJson(key, fallback) {
@@ -27,6 +31,15 @@
 
   function writeJson(key, value) {
     window.localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  function clearRecipeSessionState() {
+    [
+      "bistropet:session3:free",
+      "bistropet:session3:special",
+      "bistropet:session3:blocked",
+      "bistropet:session3:index"
+    ].forEach(key => window.sessionStorage.removeItem(key));
   }
 
   function normalize(value) {
@@ -43,7 +56,7 @@
   function sameIngredient(a, b) {
     const left = normalize(a);
     const right = normalize(b);
-    return left && right && (left === right || left.includes(right) || right.includes(left));
+    return Boolean(left && right && left === right);
   }
 
   function uniqueItems(items) {
@@ -55,22 +68,71 @@
     return result;
   }
 
+  function uniqueRestrictionLabels(items) {
+    const result = [];
+    items.forEach(item => {
+      const clean = String(item || "").trim().replace(/\s+/g, " ");
+      if (clean && !result.some(existing => normalize(existing) === normalize(clean))) result.push(clean);
+    });
+    return result;
+  }
+
+  function extractFoodRestrictions(value) {
+    const removeInstruction = item => String(item || "")
+      .replace(/^.*?\b(?:n[aã]o pode comer|n[aã]o utilizar|al[eé]rgico a|restri[cç][aã]o a)\b\s*/i, "")
+      .trim();
+    return uniqueRestrictionLabels(splitList(value)
+      .flatMap(item => removeInstruction(item).split(/\s+e\s+/i))
+      .map(item => item.trim())
+      .filter(Boolean));
+  }
+
+  function canonicalProfile(value) {
+    const profile = Object.assign({}, defaultProfile, value || {});
+    profile.notes = profile.menuStyle === "personalizada" ? String(profile.notes || "").trim() : "";
+    profile.restrictions = extractFoodRestrictions(profile.notes).join(", ");
+    profile.schemaVersion = PROFILE_SCHEMA_VERSION;
+    profile.revision = Number(profile.revision || 0);
+    profile.updatedAt = String(profile.updatedAt || "");
+    delete profile.noteRestrictions;
+    return profile;
+  }
+
   function getPetProfile() {
     const storedProfile = readJson(PROFILE_KEY, {});
-    const profile = Object.assign({}, defaultProfile, storedProfile);
-    const oldGlobalItems = uniqueItems(readJson(GLOBAL_BLOCKED_KEY, []));
-    if (oldGlobalItems.length && profile.restrictions) {
-      profile.restrictions = splitList(profile.restrictions)
-        .filter(item => !oldGlobalItems.some(globalItem => sameIngredient(item, globalItem)))
-        .join(", ");
+    const profile = canonicalProfile(storedProfile);
+    const needsMigration = storedProfile.schemaVersion !== PROFILE_SCHEMA_VERSION
+      || storedProfile.restrictions !== profile.restrictions
+      || Object.prototype.hasOwnProperty.call(storedProfile, "noteRestrictions");
+    if (needsMigration) {
+      profile.revision += 1;
+      profile.updatedAt = new Date().toISOString();
+      writeJson(PROFILE_KEY, profile);
+      window.localStorage.removeItem(GLOBAL_BLOCKED_KEY);
+      window.localStorage.removeItem(RECIPE_KEY);
+      window.localStorage.removeItem(WEEKLY_PLAN_KEY);
+      clearRecipeSessionState();
     }
     return profile;
   }
 
   function savePetProfile(profile) {
-    const nextProfile = Object.assign({}, getPetProfile(), profile);
+    const currentProfile = getPetProfile();
+    const incomingProfile = Object.assign({}, currentProfile, profile);
+    const nextProfile = canonicalProfile(incomingProfile);
+    nextProfile.revision = currentProfile.revision + 1;
+    nextProfile.updatedAt = new Date().toISOString();
     writeJson(PROFILE_KEY, nextProfile);
+    window.localStorage.removeItem(GLOBAL_BLOCKED_KEY);
+    window.localStorage.removeItem(RECIPE_KEY);
+    window.localStorage.removeItem(WEEKLY_PLAN_KEY);
+    clearRecipeSessionState();
     return nextProfile;
+  }
+
+  function getOfficialRestrictions() {
+    const profile = getPetProfile();
+    return extractFoodRestrictions(profile.notes);
   }
 
   function getLastRecipe() {
@@ -120,17 +182,21 @@
   }
 
   function getGlobalBlockedIngredients() {
-    return [];
+    return uniqueItems(readJson(GLOBAL_BLOCKED_KEY, []));
   }
 
   function saveGlobalBlockedIngredients(items) {
-    window.localStorage.removeItem(GLOBAL_BLOCKED_KEY);
-    return [];
+    const blockedItems = uniqueItems(Array.isArray(items) ? items : []);
+    if (blockedItems.length) writeJson(GLOBAL_BLOCKED_KEY, blockedItems);
+    else window.localStorage.removeItem(GLOBAL_BLOCKED_KEY);
+    return blockedItems;
   }
 
   window.BistroPetStorage = {
     getPetProfile,
     savePetProfile,
+    extractFoodRestrictions,
+    getOfficialRestrictions,
     getLastRecipe,
     saveLastRecipe,
     getRecipeHistory,
