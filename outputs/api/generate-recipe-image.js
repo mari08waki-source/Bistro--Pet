@@ -2,6 +2,10 @@ import { imageCacheKey, getCachedImage, saveCachedImage } from "./_image-cache.j
 import { checkImageLimit } from "./_image-limits.js";
 import { buildExactRecipeImagePrompt, buildRecipeImagePrompt, generateOpenAIRecipeImage } from "./_openai-image.js";
 import { simpleIngredientCombination } from "./_ingredient-combination.js";
+import { identifyImageClient } from "./_image-client.js";
+import { withImageRequestLock } from "./_image-request-lock.js";
+
+const validGenerationTypes = new Set(["freeRecipe", "customRecipe", "chefSuggestion", "weeklyPlan"]);
 
 function sendJson(res, response, status = 200) {
   res.setHeader("Content-Type", "application/json");
@@ -33,73 +37,105 @@ export default async function handler(request, response) {
   try {
     const body = readBody(request);
     const generationType = body.generationType || "freeRecipe";
-    const clientId = body.clientId || "anonymous";
+    if (!validGenerationTypes.has(generationType)) {
+      return sendJson(response, { error: "Invalid image generation type." }, 400);
+    }
+    if (!["live", "validate"].includes(process.env.IMAGE_GENERATION_MODE)) {
+      return sendJson(response, {
+        status: "disabled",
+        message: "Imagem em preparo",
+        images: []
+      }, 503);
+    }
+    const clientId = identifyImageClient(request, response);
     const recipes = (Array.isArray(body.recipes) ? body.recipes : [body.recipe]).filter(Boolean).map(normalizeRecipe);
 
     if (!recipes.length) return sendJson(response, { error: "No recipe provided." }, 400);
-
-    if (generationType !== "weeklyPlan") {
-      const results = [];
-      for (const recipe of recipes) {
-        const prompt = buildExactRecipeImagePrompt(recipe);
-        const imageBuffer = await generateOpenAIRecipeImage({ prompt, size: "1024x1536" });
-        const uniqueKey = imageCacheKey([
-          generationType,
-          recipe.recipeName,
-          ...recipe.ingredients,
-          recipe.requestId || `${Date.now()}-${Math.random()}`
-        ]);
-        const imageUrl = await saveCachedImage(uniqueKey, imageBuffer);
-        results.push({ id: recipe.id, imageUrl, status: "ready", cached: false });
-      }
-      return sendJson(response, { status: "ready", images: results });
+    if (generationType !== "weeklyPlan" && recipes.length !== 1) {
+      return sendJson(response, { error: "Individual image requests must contain exactly one recipe." }, 400);
+    }
+    if (generationType === "weeklyPlan" && recipes.length > 7) {
+      return sendJson(response, { error: "Weekly image requests cannot contain more than seven recipes." }, 400);
     }
 
-    const results = [];
-    const missing = [];
-    const missingByCacheKey = new Map();
-
-    for (const recipe of recipes) {
-      const combination = simpleIngredientCombination(recipe.ingredients);
-      const cacheKey = imageCacheKey(combination);
-      const cachedUrl = await getCachedImage(cacheKey);
-      if (cachedUrl) {
-        results.push({ id: recipe.id, cacheKey, combination, imageUrl: cachedUrl, status: "ready", cached: true });
-      } else {
-        const existing = missingByCacheKey.get(cacheKey);
-        if (existing) {
-          existing.recipes.push(recipe);
-        } else {
-          const item = { recipes: [recipe], cacheKey, combination };
-          missingByCacheKey.set(cacheKey, item);
-          missing.push(item);
+    return await withImageRequestLock(`${clientId}:${generationType}`, async () => {
+      if (generationType !== "weeklyPlan") {
+        const limit = await checkImageLimit({ generationType, clientId });
+        if (!limit.allowed) {
+          return sendJson(response, {
+            status: "limit_exceeded",
+            message: "Imagem em preparo",
+            limit,
+            images: []
+          }, 429);
         }
-      }
-    }
 
-    if (missing.length) {
+        const results = [];
+        for (const recipe of recipes) {
+          const prompt = buildExactRecipeImagePrompt(recipe);
+          const imageBuffer = await generateOpenAIRecipeImage({ prompt, size: "1024x1536" });
+          const uniqueKey = imageCacheKey([
+            generationType,
+            recipe.recipeName,
+            ...recipe.ingredients,
+            recipe.requestId || `${Date.now()}-${Math.random()}`
+          ]);
+          const imageUrl = await saveCachedImage(uniqueKey, imageBuffer);
+          results.push({ id: recipe.id, imageUrl, status: "ready", cached: false });
+        }
+        return sendJson(response, { status: "ready", images: results, limit });
+      }
+
+      const results = [];
+      const missing = [];
+      const missingByCacheKey = new Map();
       const limit = await checkImageLimit({ generationType, clientId });
       if (!limit.allowed) {
         return sendJson(response, {
           status: "limit_exceeded",
           message: "Imagem em preparo",
           limit,
-          images: results
+          images: []
         }, 429);
       }
-    }
 
-    for (const item of missing) {
-      const prompt = buildRecipeImagePrompt(item.combination);
-      const imageBuffer = await generateOpenAIRecipeImage({ prompt });
-      const imageUrl = await saveCachedImage(item.cacheKey, imageBuffer);
-      item.recipes.forEach(recipe => {
-        results.push({ id: recipe.id, cacheKey: item.cacheKey, combination: item.combination, imageUrl, status: "ready", cached: false });
-      });
-    }
+      for (const recipe of recipes) {
+        const combination = simpleIngredientCombination(recipe.ingredients);
+        const cacheKey = imageCacheKey(combination);
+        const cachedUrl = await getCachedImage(cacheKey);
+        if (cachedUrl) {
+          results.push({ id: recipe.id, cacheKey, combination, imageUrl: cachedUrl, status: "ready", cached: true });
+        } else {
+          const existing = missingByCacheKey.get(cacheKey);
+          if (existing) {
+            existing.recipes.push(recipe);
+          } else {
+            const item = { recipes: [recipe], cacheKey, combination };
+            missingByCacheKey.set(cacheKey, item);
+            missing.push(item);
+          }
+        }
+      }
 
-    return sendJson(response, { status: "ready", images: results });
+      for (const item of missing) {
+        const prompt = buildRecipeImagePrompt(item.combination);
+        const imageBuffer = await generateOpenAIRecipeImage({ prompt });
+        const imageUrl = await saveCachedImage(item.cacheKey, imageBuffer);
+        item.recipes.forEach(recipe => {
+          results.push({ id: recipe.id, cacheKey: item.cacheKey, combination: item.combination, imageUrl, status: "ready", cached: false });
+        });
+      }
+
+      return sendJson(response, { status: "ready", images: results, limit });
+    });
   } catch (error) {
+    if (error.code === "IMAGE_REQUEST_IN_PROGRESS") {
+      return sendJson(response, {
+        status: "request_in_progress",
+        message: "Imagem em preparo",
+        images: []
+      }, 409);
+    }
     return sendJson(response, {
       status: "failed",
       message: "Imagem em preparo",

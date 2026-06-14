@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#556a54" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="BistrôPet" />
     <title>Bistro Pet - Perfil do Pet</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/bistropet-apple-180.png" />
     <link rel="stylesheet" href="./styles.css?v=session2-profile" />
   </head>
   <body class="session-two-body">
@@ -89,6 +95,38 @@
       const freeProfile = document.getElementById("freeProfile");
       const customProfile = document.getElementById("customProfile");
       const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
+      const observationFoodWords = [
+        "mandioquinha", "beterraba", "abobrinha", "mandioca", "cenoura", "batata", "frango",
+        "chuchu", "carne", "peixe", "tilapia", "salmao", "arroz", "milho", "inhame",
+        "pepino", "vagem", "couve", "selga", "quinoa", "aveia", "abobora", "peru", "ovo"
+      ];
+
+      function splitJoinedFoodWord(value) {
+        const clean = String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        if (!clean || !/^[a-z]+$/.test(clean)) return "";
+        const parts = [];
+        let remaining = clean;
+        while (remaining) {
+          const match = observationFoodWords.find(item => remaining.startsWith(item));
+          if (!match) return "";
+          parts.push(match);
+          remaining = remaining.slice(match.length);
+        }
+        return parts.length > 1 ? parts.join("\n") : "";
+      }
+
+      function normalizeObservationSeparators(value) {
+        return String(value || "")
+          .replace(/[\u200B-\u200D\u2060\uFEFF]+/g, "\n")
+          .replace(/\u00A0/g, " ")
+          .replace(/\s*[,;]\s*/g, "\n")
+          .replace(/\n[ \t]+|[ \t]+\n/g, "\n")
+          .replace(/\n{2,}/g, "\n")
+          .split("\n")
+          .map(item => splitJoinedFoodWord(item.trim()) || item)
+          .join("\n");
+      }
+
       function syncProfileModeFields() {
         observationCard.hidden = !customProfile.checked;
         if (!customProfile.checked) observationField.value = "";
@@ -134,7 +172,7 @@
           age: String(data.get("age") || "").trim(),
           weight: String(data.get("weight") || "").trim(),
           menuStyle: customProfile.checked ? "personalizada" : "livre",
-          notes: customProfile.checked ? String(data.get("notes") || "").trim() : ""
+          notes: customProfile.checked ? normalizeObservationSeparators(data.get("notes")).trim() : ""
         };
       }
 
@@ -153,6 +191,15 @@
           syncProfileModeFields();
           savePetProfile();
         });
+      });
+      observationField.addEventListener("input", () => {
+        const original = observationField.value;
+        const normalized = normalizeObservationSeparators(original);
+        if (normalized === original) return;
+        const cursor = observationField.selectionStart;
+        const normalizedCursor = normalizeObservationSeparators(original.slice(0, cursor)).length;
+        observationField.value = normalized;
+        observationField.setSelectionRange(normalizedCursor, normalizedCursor);
       });
       const autoAdvanceFields = [
         { name: "tutor", next: "name", minimumLength: 2 },

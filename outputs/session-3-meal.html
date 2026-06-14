@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#556a54" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="BistrôPet" />
     <title>Bistro Pet - Gerador de Receitas</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/bistropet-apple-180.png" />
     <link rel="stylesheet" href="./styles.css?v=session3-bistro-generator-fixed-width" />
     <style>
       .mode-panel { display: none; gap: 8px; }
@@ -486,6 +492,14 @@
           .trim();
       }
 
+      function matchesBlockedIngredient(ingredient, blockedItem) {
+        const preparedName = preparedIngredientName(ingredient);
+        const blockedName = normalize(blockedItem);
+        if (!preparedName || !blockedName) return false;
+        if (preparedName === blockedName) return true;
+        return blockedName === "peixe" && /\b(peixe|tilapia|salmao)\b/.test(preparedName);
+      }
+
       function uniqueItems(items) {
         const result = [];
         items.forEach(item => {
@@ -496,14 +510,11 @@
       }
 
       function isBlocked(ingredient) {
-        const preparedName = preparedIngredientName(ingredient);
-        return blockedIngredients.some(item =>
-          sameIngredient(ingredient, item) || preparedName === normalize(item)
-        );
+        return blockedIngredients.some(item => matchesBlockedIngredient(ingredient, item));
       }
 
       function isPersonalizedBlocked(ingredient) {
-        return personalizedBlockedIngredients.some(item => sameIngredient(ingredient, item));
+        return personalizedBlockedIngredients.some(item => matchesBlockedIngredient(ingredient, item));
       }
 
       function safeItems(items) {

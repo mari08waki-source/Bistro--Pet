@@ -20,6 +20,17 @@ export function buildExactRecipeImagePrompt({ recipeName, ingredients }) {
 }
 
 export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) {
+  if (process.env.IMAGE_GENERATION_MODE === "validate") {
+    return Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64"
+    );
+  }
+
+  if (process.env.IMAGE_GENERATION_MODE !== "live") {
+    throw new Error("Image generation is disabled.");
+  }
+
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }

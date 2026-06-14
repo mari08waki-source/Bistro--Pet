@@ -47,10 +47,42 @@
   }
 
   function splitList(value) {
-    return String(value || "")
+    return normalizeObservationText(value)
       .split(/[,.;\n]/)
       .map(item => item.trim().replace(/\s+/g, " "))
       .filter(Boolean);
+  }
+
+  const observationFoodWords = [
+    "mandioquinha", "beterraba", "abobrinha", "mandioca", "cenoura", "batata", "frango",
+    "chuchu", "carne", "peixe", "tilapia", "salmao", "arroz", "milho", "inhame",
+    "pepino", "vagem", "couve", "selga", "quinoa", "aveia", "abobora", "peru", "ovo"
+  ];
+
+  function splitJoinedFoodWord(value) {
+    const clean = normalize(value);
+    if (!clean || !/^[a-z]+$/.test(clean)) return "";
+    const parts = [];
+    let remaining = clean;
+    while (remaining) {
+      const match = observationFoodWords.find(item => remaining.startsWith(item));
+      if (!match) return "";
+      parts.push(match);
+      remaining = remaining.slice(match.length);
+    }
+    return parts.length > 1 ? parts.join("\n") : "";
+  }
+
+  function normalizeObservationText(value) {
+    return String(value || "")
+      .replace(/[\u200B-\u200D\u2060\uFEFF]+/g, "\n")
+      .replace(/\u00A0/g, " ")
+      .replace(/\s*[,;]\s*/g, "\n")
+      .replace(/\n[ \t]+|[ \t]+\n/g, "\n")
+      .replace(/\n{2,}/g, "\n")
+      .split("\n")
+      .map(item => splitJoinedFoodWord(item.trim()) || item)
+      .join("\n");
   }
 
   function sameIngredient(a, b) {
@@ -89,7 +121,7 @@
 
   function canonicalProfile(value) {
     const profile = Object.assign({}, defaultProfile, value || {});
-    profile.notes = profile.menuStyle === "personalizada" ? String(profile.notes || "").trim() : "";
+    profile.notes = profile.menuStyle === "personalizada" ? normalizeObservationText(profile.notes).trim() : "";
     profile.restrictions = extractFoodRestrictions(profile.notes).join(", ");
     profile.schemaVersion = PROFILE_SCHEMA_VERSION;
     profile.revision = Number(profile.revision || 0);

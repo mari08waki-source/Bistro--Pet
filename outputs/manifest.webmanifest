@@ -1,0 +1,23 @@
+{
+  "name": "BistrôPet",
+  "short_name": "BistrôPet",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#556a54",
+  "background_color": "#fbf8f1",
+  "icons": [
+    {
+      "src": "./icons/bistropet-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/bistropet-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

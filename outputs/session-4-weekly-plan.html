@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#556a54" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="BistrôPet" />
     <title>Bistro Pet - Plano Semanal</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/bistropet-apple-180.png" />
     <link rel="stylesheet" href="./styles.css?v=session4-weekly-plan" />
     <style>
       #weeklyPlanner .weekly-kitchen-stage { min-height: 520px; }
@@ -294,7 +300,8 @@
         return restrictions.some(item => {
           const cleanRestriction = normalize(item);
           if (!cleanIngredient || !cleanRestriction) return false;
-          return cleanIngredient === cleanRestriction;
+          if (cleanIngredient === cleanRestriction) return true;
+          return cleanRestriction === "peixe" && /\b(peixe|tilapia|salmao)\b/.test(cleanIngredient);
         });
       }
 
@@ -408,6 +415,22 @@
         return "";
       }
 
+      function proteinFamily(ingredient) {
+        const cleanIngredient = normalize(ingredient);
+        if (/\b(peixe|tilapia|salmao)\b/.test(cleanIngredient)) return "peixe";
+        return cleanIngredient;
+      }
+
+      function uniqueProteinFamilies(items) {
+        const families = new Set();
+        return items.filter(item => {
+          const family = proteinFamily(item);
+          if (!family || families.has(family)) return false;
+          families.add(family);
+          return true;
+        });
+      }
+
       function safeCatalog(category, restrictions, offset) {
         const items = weeklyCatalog[category] || [];
         return items
@@ -478,7 +501,7 @@
 
       function customWeeklyIngredients({ pool, activeRestrictions, dayIndex, usedCombinations }) {
         const preferred = uniqueIngredients(pool).filter(item => !isRestricted(item, activeRestrictions));
-        const proteins = safeCatalog("protein", activeRestrictions, 0);
+        const proteins = uniqueProteinFamilies(safeCatalog("protein", activeRestrictions, 0));
         const bases = safeCatalog("base", activeRestrictions, 0);
         const vegetables = safeCatalog("vegetable", activeRestrictions, 0);
         for (let attempt = 0; attempt < 49; attempt += 1) {
