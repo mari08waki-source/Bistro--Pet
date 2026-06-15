@@ -25,6 +25,39 @@ body {
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline: 3px solid #315f52;
+  outline-offset: 3px;
+}
+
+.audio-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.audio-button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(85, 106, 84, .24);
+  border-radius: 999px;
+  background: #f0eadf;
+  color: #52683f;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.audio-button[data-audio-stop] {
+  background: #efd1c9;
+  color: #8b473e;
+}
+
+.audio-button[hidden] {
+  display: none;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(340px, 42vw) 1fr;

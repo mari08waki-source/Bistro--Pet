@@ -123,10 +123,13 @@
       .history-detail[hidden] { display: none; }
       .history-back { justify-self: start; border: 0; background: transparent; color: var(--sage-dark); cursor: pointer; padding: 0; font-size: 12px; font-weight: 800; }
       .history-detail h3 { margin: 0; font-size: 25px; line-height: 1.05; }
-      .recipe-title-row { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
-      .recipe-title-row h2 { flex: 1; }
-      .save-recipe { flex: 0 0 auto; border: 1px solid rgba(85, 106, 84, .24); border-radius: 999px; background: #d8e6c8; color: #52683f; cursor: pointer; padding: 6px 10px; font-size: 11px; font-weight: 800; }
-      .save-recipe:disabled { cursor: default; opacity: .72; }
+	      .recipe-title-row { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+	      .recipe-title-row h2 { flex: 1; }
+	      .recipe-title-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+	      .save-recipe { flex: 0 0 auto; border: 1px solid rgba(85, 106, 84, .24); border-radius: 999px; background: #d8e6c8; color: #52683f; cursor: pointer; padding: 6px 10px; font-size: 11px; font-weight: 800; }
+	      .save-recipe:disabled { cursor: default; opacity: .72; }
+	      .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
+	      .ingredient-list li { display: block; width: 100%; }
     </style>
   </head>
   <body class="session-three-body">
@@ -221,13 +224,17 @@
           </div>
         </div>
 
-        <div class="live-recipe-card" id="liveRecipeCard">
+	        <div class="live-recipe-card" id="liveRecipeCard" role="region" aria-live="polite" aria-labelledby="recipeName">
           <img class="result-photo" id="mealPhoto" src="./session-3-meal-hero.png" alt="Prato premium gerado para pet" />
           <div class="result-copy">
             <span class="recipe-note">Criado agora pelo Bistro</span>
             <div class="recipe-title-row">
               <h2 id="recipeName">Delicia suave de frango com abóbora</h2>
-              <button class="save-recipe" id="saveRecipeToHistory" type="button">Salvar</button>
+	              <div class="recipe-title-actions">
+	                <button class="save-recipe" id="saveRecipeToHistory" type="button">Salvar</button>
+	                <button class="audio-button" id="listenRecipe" type="button" data-audio-listen aria-label="Ouvir receita">🔊 Ouvir</button>
+	                <button class="audio-button" id="stopRecipeAudio" type="button" data-audio-stop aria-label="Parar leitura da receita" hidden>⏹️ Parar</button>
+	              </div>
             </div>
             <p id="recipeDescription">Uma combinação macia e morna, criada para Luna a partir dos ingredientes que ela costuma gostar.</p>
             <div class="ingredient-list">
@@ -262,7 +269,8 @@
       </section>
     </div>
 
-    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
+	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
+	    <script src="./bistropet-accessibility.js"></script>
     <script>
       const modeCopy = {
         livre: {
@@ -304,66 +312,12 @@
       };
 
       const chefMenus = [
-        {
-          title: "Veloute do chef com frango dourado",
-          ingredients: ["Frango desfiado", "Abóbora cozida", "Quinoa suave", "Cenoura delicada"],
-          description: "Uma sugestão cremosa, clara e equilibrada, pensada para servir conforto sem perder a assinatura premium do Bistro.",
-          steps: [
-            "Cozinhe o frango até ficar macio e desfie em fios pequenos.",
-            "Amasse a abóbora com a quinoa até formar uma base aveludada.",
-            "Finalize com cenoura bem cozida e sirva morno, em porção delicada."
-          ]
-        },
-        {
-          title: "Bowl de peixe em lascas com jardim macio",
-          ingredients: ["Peixe em lascas", "Batata doce", "Abobrinha cozida", "Arroz macio"],
-          description: "Uma composição leve, aromatica e suave, com contraste de textura entre peixe delicado e legumes cozidos.",
-          steps: [
-            "Cozinhe o peixe sem temperos e separe em lascas pequenas.",
-            "Prepare a batata doce e o arroz até ficarem úmidos e macios.",
-            "Incorpore a abobrinha por ultimo para manter o prato leve e brilhante."
-          ]
-        },
-        {
-          title: "Menu degustacao de patinho e mandioquinha",
-          ingredients: ["Patinho cozido", "Mandioquinha cremosa", "Chuchu macio", "Cenoura delicada"],
-          description: "Uma receita mais encorpada, com base cremosa e acabamento delicado para parecer feita sob medida.",
-          steps: [
-            "Cozinhe o patinho e corte em pedaços bem pequenos.",
-            "Transforme a mandioquinha em creme liso, sem adicionar sal.",
-            "Monte com chuchu e cenoura em camadas macias antes de servir."
-          ]
-        },
-        {
-          title: "Risottinho natural de ovos e abobrinha",
-          ingredients: ["Ovos cozidos", "Arroz macio", "Abobrinha cozida", "Abóbora cozida"],
-          description: "Uma sugestão delicada e nutritiva, com textura de risottinho e finalização cremosa do chef.",
-          steps: [
-            "Pique os ovos cozidos em cubos pequenos e uniformes.",
-            "Misture o arroz com a abóbora até ganhar textura úmida.",
-            "Dobre a abobrinha no final para preservar suavidade e frescor."
-          ]
-        },
-        {
-          title: "Prato assinatura de frango com mandioquinha",
-          ingredients: ["Frango desfiado", "Mandioquinha cremosa", "Batata doce", "Abobrinha cozida"],
-          description: "Uma receita acolhedora, com corpo cremoso e ingredientes escolhidos para um resultado elegante e seguro.",
-          steps: [
-            "Cozinhe frango, mandioquinha e batata doce separadamente.",
-            "Una os cremes aos poucos até formar uma base macia e uniforme.",
-            "Acrescente a abobrinha bem cozida e sirva em temperatura morna."
-          ]
-        },
-        {
-          title: "Tigela bistro de peixe com quinoa suave",
-          ingredients: ["Peixe em lascas", "Quinoa suave", "Chuchu macio", "Abóbora cozida"],
-          description: "Uma combinação refinada e leve, com peixe em lascas e base vegetal cremosa para variar o repertorio.",
-          steps: [
-            "Prepare a quinoa até ficar macia e bem hidratada.",
-            "Cozinhe o peixe e remova espinhas antes de separar em lascas.",
-            "Misture com chuchu e abóbora, mantendo uma textura facil de comer."
-          ]
-        }
+        { ingredients: ["Frango", "Abóbora", "Quinoa", "Cenoura"] },
+        { ingredients: ["Peixe", "Batata doce", "Abobrinha", "Arroz"] },
+        { ingredients: ["Carne", "Mandioquinha", "Chuchu", "Cenoura"] },
+        { ingredients: ["Ovos", "Arroz", "Abobrinha", "Abóbora"] },
+        { ingredients: ["Frango", "Mandioquinha", "Batata doce", "Abobrinha"] },
+        { ingredients: ["Peixe", "Quinoa", "Chuchu", "Abóbora"] }
       ];
 
       const sessionKeys = {
@@ -381,7 +335,12 @@
       saveSessionList(sessionKeys.free, []);
       let specialIngredients = [];
       let profilePersonalizedBlockedIngredients = personalizedProfileBlockedItems();
-      let personalizedBlockedIngredients = [...profilePersonalizedBlockedIngredients];
+      let personalizedBlockedIngredients = uniqueItems([
+        ...profilePersonalizedBlockedIngredients,
+        ...(window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients
+          ? window.BistroPetStorage.getGlobalBlockedIngredients()
+          : [])
+      ]);
       let currentPersonalizedBlockedIngredients = [];
       let currentFreeBlockedIngredients = [];
       let blockedIngredients = uniqueItems([
@@ -439,7 +398,21 @@
       }
 
       function splitPersonalizedList(value) {
-        return splitList(value);
+        const protectedItems = [
+          ["batata doce", "batata-doce"],
+          ["fígado de boi", "fígado-de-boi"],
+          ["figado de boi", "figado-de-boi"],
+          ["fígado de galinha", "fígado-de-galinha"],
+          ["figado de galinha", "figado-de-galinha"]
+        ];
+        let text = String(value || "");
+        protectedItems.forEach(([item, protectedItem]) => {
+          text = text.replace(new RegExp(item, "gi"), protectedItem);
+        });
+        return text
+          .split(/[,.;\n\s]+/)
+          .map(item => cleanItem(item.replace(/-/g, " ")))
+          .filter(Boolean);
       }
 
       function profileBlockedItems() {
@@ -454,16 +427,17 @@
         const officialRestrictions = window.BistroPetStorage && window.BistroPetStorage.getOfficialRestrictions
           ? window.BistroPetStorage.getOfficialRestrictions()
           : personalizedProfileBlockedItems();
-        profilePersonalizedBlockedIngredients = [...officialRestrictions];
+        const globalRestrictions = window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients
+          ? window.BistroPetStorage.getGlobalBlockedIngredients()
+          : [];
+        profilePersonalizedBlockedIngredients = uniqueItems([...officialRestrictions, ...globalRestrictions]);
         personalizedBlockedIngredients = uniqueItems([
-          ...officialRestrictions,
+          ...profilePersonalizedBlockedIngredients,
           ...currentPersonalizedBlockedIngredients
         ]);
         blockedIngredients = uniqueItems([
           ...officialRestrictions,
-          ...(window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients
-            ? window.BistroPetStorage.getGlobalBlockedIngredients()
-            : [])
+          ...globalRestrictions
         ]);
       }
 
@@ -488,8 +462,17 @@
       function preparedIngredientName(value) {
         return normalize(value)
           .replace(/\b(desfiado|desfiada|cozido|cozida|cozidos|cozidas|macio|macia|suave|delicado|delicada|fresco|fresca|em lascas)\b/g, "")
+          .replace(/\be\b/g, "")
           .replace(/\s+/g, " ")
           .trim();
+      }
+
+      function proteinFamilyName(value) {
+        const name = preparedIngredientName(value);
+        if (/\b(tilapia|pescada|merluza|salmao|pacu|traira|peixe)\b/.test(name)) return "peixe";
+        if (/\b(frango|peito de frango|sobrecoxa)\b/.test(name)) return "frango";
+        if (/\b(patinho|musculo|coxao mole|carne bovina magra|carne bovina|acem|carne)\b/.test(name)) return "carne";
+        return "";
       }
 
       function matchesBlockedIngredient(ingredient, blockedItem) {
@@ -497,7 +480,8 @@
         const blockedName = normalize(blockedItem);
         if (!preparedName || !blockedName) return false;
         if (preparedName === blockedName) return true;
-        return blockedName === "peixe" && /\b(peixe|tilapia|salmao)\b/.test(preparedName);
+        return ["carne", "peixe", "frango"].includes(blockedName)
+          && blockedName === proteinFamilyName(ingredient);
       }
 
       function uniqueItems(items) {
@@ -554,7 +538,8 @@
         return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("pt-BR");
       }
 
-      function showHistoryList() {
+	      function showHistoryList() {
+	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
         const history = window.BistroPetStorage && window.BistroPetStorage.getRecipeHistory
           ? window.BistroPetStorage.getRecipeHistory()
           : [];
@@ -569,12 +554,18 @@
         `).join("") : `<p class="history-empty">Nenhuma receita criada ainda.</p>`;
       }
 
-      function showHistoryDetail(recipe) {
+	      function showHistoryDetail(recipe) {
         recipeHistoryList.hidden = true;
         recipeHistoryDetail.hidden = false;
         recipeHistoryDetail.innerHTML = `
           <button class="history-back" type="button" id="backToRecipeHistory">Voltar</button>
-          <h3>${escapeHtml(recipe.title)}</h3>
+	          <div class="recipe-title-row">
+	            <h3>${escapeHtml(recipe.title)}</h3>
+	            <div class="audio-actions">
+	              <button class="audio-button" type="button" id="listenHistoryRecipe" data-audio-listen aria-label="Ouvir receita salva">🔊 Ouvir</button>
+	              <button class="audio-button" type="button" id="stopHistoryAudio" data-audio-stop aria-label="Parar leitura da receita salva" hidden>⏹️ Parar</button>
+	            </div>
+	          </div>
           <div class="ingredient-list">
             <strong>Ingredientes utilizados</strong>
             <ul>${(recipe.ingredients || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
@@ -584,7 +575,13 @@
             <ol>${(recipe.steps || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol>
           </div>
         `;
-        document.getElementById("backToRecipeHistory").addEventListener("click", showHistoryList);
+	        document.getElementById("backToRecipeHistory").addEventListener("click", showHistoryList);
+	        document.getElementById("listenHistoryRecipe").addEventListener("click", () => {
+	          if (window.BistroPetAccessibility) window.BistroPetAccessibility.speakRecipe(recipe);
+	        });
+	        document.getElementById("stopHistoryAudio").addEventListener("click", () => {
+	          if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
+	        });
       }
 
       function renderTags(container, items, type, isBlockedTag = false) {
@@ -597,8 +594,8 @@
       }
 
       function renderState() {
-        renderTags(freeTags, freeIngredients, "free");
-        renderTags(specialTags, specialIngredients, "special");
+        renderTags(freeTags, activeRecipeMode === "livre" ? freeIngredients : [], "free");
+        renderTags(specialTags, activeRecipeMode === "personalizada" ? specialIngredients : [], "special");
         renderTags(freeRestrictionList, currentFreeBlockedIngredients, "blocked", true);
         renderTags(restrictionList, personalizedBlockedIngredients, "personalized-blocked", true);
       }
@@ -742,147 +739,155 @@
       }
 
       function completePersonalizedIngredients() {
-        return uniqueItems(specialIngredients).filter(item => !isPersonalizedBlocked(item));
+        return uniqueItems(specialIngredients.map(simpleIngredientName)).filter(item => !isPersonalizedBlocked(item));
       }
 
       function formatFreeIngredient(item) {
-        const clean = cleanItem(item);
-        const text = normalize(clean);
-        if (text.includes("mandioca") || text.includes("aipim") || text.includes("macaxeira")) return "Purê de mandioca";
-        if (text.includes("carne")) return "Carne cozida";
-        if (text.includes("patinho")) return "Patinho cozido";
-        if (text.includes("pepino")) return "Pepino fresco";
-        return clean;
+        return simpleIngredientName(item);
       }
 
       function completeFreeIngredients() {
-        const selected = safeItems(freeIngredients).map(formatFreeIngredient);
+        const selected = safeItems(freeIngredients.map(formatFreeIngredient));
         return uniqueItems(selected);
       }
 
       function chefIngredients() {
         const menu = chefMenus[recipeIndex % chefMenus.length];
-        return uniqueItems(safeItems(menu.ingredients));
+        return uniqueItems(safeItems(menu.ingredients.map(simpleIngredientName)));
       }
 
-      function chefSteps() {
-        const menu = chefMenus[recipeIndex % chefMenus.length];
-        const blockedMenuItems = menu.ingredients.filter(isBlocked);
-        if (!blockedMenuItems.length) return menu.steps;
-        return [
-          "O chef removeu os alimentos proibidos antes de montar a sugestão.",
-          "Ajuste a base com ingredientes seguros de textura macia e preparo simples.",
-          "Sirva morno, sem temperos fortes, mantendo a finalização premium do Bistro."
-        ];
+      function chefSteps(ingredients) {
+        return naturalPrepSteps(ingredients);
       }
 
       function chefTitle(ingredients) {
-        const menu = chefMenus[recipeIndex % chefMenus.length];
-        const blockedMenuItems = menu.ingredients.filter(isBlocked);
-        if (!blockedMenuItems.length) return menu.title;
-        const main = ingredients[0] || "base segura";
-        const side = ingredients[1] || "textura macia";
-        return `Menu seguro do chef com ${main.toLowerCase()} e ${side.toLowerCase()}`;
+        return simpleRecipeTitle(ingredients);
       }
 
       function chefDescription(ingredients) {
-        const name = getPetName();
-        const menu = chefMenus[recipeIndex % chefMenus.length];
-        const blockedMenuItems = menu.ingredients.filter(isBlocked);
-        if (!blockedMenuItems.length) return `${menu.description} Criado para ${name} com uma combinação exclusiva deste clique.`;
-        return `Sugestão ajustada para ${name}, substituindo itens proibidos por ${ingredients.slice(0, 2).map(item => item.toLowerCase()).join(" e ")} em uma composição segura e elegante.`;
+        return `Receita preparada com ${naturalList(ingredients)}.`;
       }
 
       function freePrepSteps(ingredients) {
-        const steps = ingredients.map(item => {
-          const clean = item.toLowerCase();
-          if (clean.includes("frango")) return `Prepare o ${clean} desfiado.`;
-          if (clean.includes("peixe")) return `Cozinhe o ${clean} e separe em lascas pequenas.`;
-          if (clean.includes("ovo")) return `Cozinhe ${clean} e pique em pedaços pequenos.`;
-          if (clean.includes("carne cozida") || clean.includes("patinho cozido")) return `Prepare ${clean} em pedaços pequenos e macios.`;
-          if (clean.includes("purê de mandioca")) return "Prepare o purê de mandioca com textura cremosa e sem temperos fortes.";
-          if (clean.includes("pepino fresco")) return "Corte o pepino fresco em pedaços pequenos para servir ao lado.";
-          return `Cozinhe ${clean} até ficar macio.`;
-        });
-        steps.push("Misture tudo em textura macia e sirva em temperatura adequada.");
-        return steps;
+        return naturalPrepSteps(ingredients);
       }
 
       function personalizedTitle(ingredients) {
-        const name = getPetName();
-        const main = ingredients[0] || "ingredientes selecionados";
-        const side = ingredients[1] || "";
-        const titles = [
-          `Delícia suave de ${main.toLowerCase()}${side ? ` com ${side.toLowerCase()}` : ""}`,
-          `Combinação especial para ${name}`,
-          `Receita leve de ${ingredients.slice(0, 2).map(item => item.toLowerCase()).join(" e ")}`,
-          `Menu delicado da casa`,
-          `Bowl especial de ${main.toLowerCase()}`
-        ];
-        return titles[recipeIndex % titles.length];
+        return simpleRecipeTitle(ingredients);
       }
 
       function personalizedDescription(ingredients) {
-        const name = getPetName();
-        const ingredientText = ingredients.map(item => item.toLowerCase()).join(", ");
-        const descriptions = [
-          `Uma combinação criada especialmente para ${name}, valorizando ${ingredientText} em uma receita leve e equilibrada.`,
-          `Receita personalizada para ${name}, preparada com os ingredientes escolhidos pelo tutor: ${ingredientText}.`,
-          `Uma composição delicada que reúne ${ingredientText} em texturas agradáveis e fáceis de servir.`,
-          `Seleção exclusiva para ${name}, com ${ingredientText} preparados de forma simples e cuidadosa.`
-        ];
-        return descriptions[recipeIndex % descriptions.length];
-      }
-
-      function ingredientPrepInstruction(item) {
-        const clean = item.toLowerCase();
-        if (clean.includes("frango")) return `Cozinhe o ${clean} e desfie em fios pequenos.`;
-        if (clean.includes("peixe")) return `Cozinhe o ${clean}, retire espinhas e separe em lascas delicadas.`;
-        if (clean.includes("carne") || clean.includes("patinho")) return `Cozinhe a ${clean} e corte em pedaços pequenos e macios.`;
-        if (clean.includes("ovo")) return `Cozinhe ${clean} e pique em pedaços pequenos.`;
-        if (clean.includes("arroz") || clean.includes("quinoa")) return `Cozinhe ${clean} com água até ficar bem macio e úmido.`;
-        if (clean.includes("batata") || clean.includes("mandioca") || clean.includes("mandioquinha") || clean.includes("abóbora")) return `Cozinhe ${clean} e amasse levemente para formar uma base macia.`;
-        return `Cozinhe ${clean} e corte em pedaços adequados para misturar à receita.`;
+        return `Receita preparada com ${naturalList(ingredients)}.`;
       }
 
       function personalizedPrepSteps(ingredients) {
-        const ordered = ingredients.map(ingredientPrepInstruction);
-        const finishes = [
-          "Una os ingredientes aos poucos, ajustando a textura até obter uma mistura macia.",
-          "Misture os ingredientes preparados delicadamente para distribuir sabores e texturas.",
-          "Monte a receita combinando primeiro a base macia e depois os demais ingredientes."
-        ];
-        ordered.push(finishes[recipeIndex % finishes.length]);
-        ordered.push("Aguarde amornar e sirva em pequenas porções.");
-        return ordered;
+        return naturalPrepSteps(ingredients);
+      }
+
+      function isProteinIngredient(item) {
+        return /\b(frango|peixe|tilapia|salm[aã]o|carne|patinho|peru|ovo|ovos|figado|fígado)\b/.test(normalize(item));
+      }
+
+      function isFreshIngredient(item) {
+        return /\b(pepino|folha|folhas|alface|rucula|rúcula)\b/.test(normalize(item));
+      }
+
+      function isGrainIngredient(item) {
+        return /\b(arroz|quinoa|aveia|milho)\b/.test(normalize(item));
+      }
+
+      function naturalList(items) {
+        const names = uniqueItems(items).map(item => item.toLowerCase());
+        if (names.length < 2) return names[0] || "os ingredientes";
+        return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+      }
+
+      function simpleRecipeTitle(ingredients) {
+        const items = uniqueItems(ingredients);
+        if (!items.length) return "Receita caseira";
+        const [main, ...others] = items;
+        const mainName = normalize(main) === "carne"
+          ? "Carne cozida"
+          : ["frango", "peixe"].includes(normalize(main))
+            ? `${main.charAt(0).toUpperCase()}${main.slice(1).toLowerCase()} cozido`
+            : `${main.charAt(0).toUpperCase()}${main.slice(1).toLowerCase()}`;
+        return `${mainName}${others.length ? ` com ${naturalList(others)}` : ""}`;
+      }
+
+      function cookedMeatEnding(items) {
+        if (items.length > 1) return "ficarem bem cozidos";
+        return normalize(items[0]) === "carne" ? "ficar bem cozida" : "ficar bem cozido";
+      }
+
+      function cookedIngredientEnding(items) {
+        const feminine = /\b(batata|batata doce|cenoura|mandioca|mandioquinha|abobora|abobrinha|quinoa|aveia|couve|vagem)\b/;
+        const allFeminine = items.every(item => feminine.test(normalize(item)));
+        if (items.length > 1) return allFeminine ? "ficarem bem macias" : "ficarem bem macios";
+        return allFeminine ? "ficar bem macia" : "ficar bem macio";
+      }
+
+      function naturalPrepSteps(ingredients) {
+        const items = uniqueItems(ingredients);
+        const meats = items.filter(isProteinIngredient);
+        const eggs = meats.filter(item => /\bovo|ovos\b/.test(normalize(item)));
+        const nonEggMeats = meats.filter(item => !eggs.some(egg => sameIngredient(egg, item)));
+        const fish = nonEggMeats.filter(item => normalize(item) === "peixe");
+        const otherMeats = nonEggMeats.filter(item => !fish.some(fishItem => sameIngredient(fishItem, item)));
+        const fresh = items.filter(isFreshIngredient);
+        const cooked = items.filter(item => !isProteinIngredient(item) && !isFreshIngredient(item));
+        const cutItems = cooked.filter(item => !isGrainIngredient(item));
+        const steps = ["Separe todos os ingredientes."];
+
+        if (cutItems.length) {
+          steps.push(`Corte ${naturalList(cutItems)} em cubinhos pequenos.`);
+        }
+        if (otherMeats.length) {
+          steps.push(`Cozinhe ${naturalList(otherMeats)} até ${cookedMeatEnding(otherMeats)}. Depois, desfie ou corte em pedaços pequenos.`);
+        }
+        if (fish.length) {
+          steps.push(`Cozinhe ${naturalList(fish)} por cerca de 20 minutos ou até ficar bem cozido. Retire cuidadosamente todas as espinhas e desfie ou corte em pedaços pequenos.`);
+        }
+        if (eggs.length) {
+          steps.push(`Cozinhe ${naturalList(eggs)}, retire a casca e pique em pedaços pequenos.`);
+        }
+        if (cooked.length) {
+          steps.push(`Cozinhe ${naturalList(cooked)} com água até ${cookedIngredientEnding(cooked)}.`);
+        }
+        if (fresh.length) {
+          steps.push(`Lave bem ${naturalList(fresh)} e corte em pedaços pequenos.`);
+        }
+        steps.push(`Misture ${naturalList(items)}.`);
+        steps.push(meats.length || cooked.length ? "Espere amornar até a temperatura ambiente e sirva." : "Sirva em temperatura ambiente.");
+        return steps;
       }
 
       function simpleIngredientName(item) {
         const clean = cleanItem(item);
-        return clean
+        const simple = clean
           .replace(/^pur[eê] de\s+/i, "")
           .replace(/\s+em\s+(lascas|cubos|pedaços)$/i, "")
           .replace(/\s+(desfiado|desfiada|cozido|cozida|cozidos|cozidas|macio|macia|cremoso|cremosa|delicado|delicada|fresco|fresca|suave)$/i, "")
           .trim();
+        const text = normalize(simple);
+        if (/\b(figado de boi|figado bovino)\b/.test(text)) return "Fígado de boi";
+        if (/\b(figado de galinha|figado de frango)\b/.test(text)) return "Fígado de galinha";
+        return simple;
+      }
+
+      function ingredientsForMode(mode) {
+        if (mode === "livre") return completeFreeIngredients();
+        if (mode === "personalizada") return completePersonalizedIngredients();
+        return chefIngredients();
       }
 
       function buildRecipe(mode) {
         const name = getPetName();
-        const ingredientsByMode = {
-          livre: completeFreeIngredients(),
-          personalizada: completePersonalizedIngredients(),
-          chef: chefIngredients()
-        };
-        const ingredients = uniqueItems((ingredientsByMode[mode] || []).map(simpleIngredientName));
-        const copy = modeCopy[mode];
-        const main = ingredients[0] || "base suave";
-        const side = ingredients[1] || "acompanhamento macio";
-
+        const ingredients = uniqueItems(ingredientsForMode(mode));
         return {
-          title: mode === "chef" ? chefTitle(ingredients) : mode === "personalizada" ? personalizedTitle(ingredients) : `${copy.names[recipeIndex % copy.names.length]} de ${main.toLowerCase()}${ingredients[1] ? ` com ${side.toLowerCase()}` : ""}`,
+          title: mode === "chef" ? chefTitle(ingredients) : mode === "personalizada" ? personalizedTitle(ingredients) : simpleRecipeTitle(ingredients),
           description: mode === "livre" ? "" : mode === "chef" ? chefDescription(ingredients) : personalizedDescription(ingredients),
           ingredients,
-          steps: mode === "livre" ? freePrepSteps(ingredients) : mode === "chef" ? chefSteps() : personalizedPrepSteps(ingredients),
+          steps: mode === "livre" ? freePrepSteps(ingredients) : mode === "chef" ? chefSteps(ingredients) : personalizedPrepSteps(ingredients),
           image: "",
           mode
         };
@@ -969,7 +974,8 @@
         saveButton.disabled = false;
       }
 
-      function resetRecipeCard() {
+	      function resetRecipeCard() {
+	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
         currentGeneratedRecipe = null;
         kitchen.classList.remove("is-generated");
         document.getElementById("recipeName").textContent = "";
@@ -985,10 +991,12 @@
 
       function setMode(mode) {
         activeRecipeMode = mode;
+        freeInput.value = "";
+        specialInput.value = "";
         if (mode === "personalizada") {
           syncPersonalizedProfileBlockedItems();
-          renderState();
         }
+        renderState();
         document.querySelectorAll(".mode-pill").forEach(button => {
           button.classList.toggle("active", button.dataset.mode === mode);
         });
@@ -1085,21 +1093,34 @@
         button.addEventListener("click", () => setMode(button.dataset.mode));
       });
       document.getElementById("createRecipe").addEventListener("click", generateRecipe);
-      document.getElementById("saveRecipeToHistory").addEventListener("click", event => {
+	      document.getElementById("saveRecipeToHistory").addEventListener("click", event => {
         if (!currentGeneratedRecipe || !window.BistroPetStorage || !window.BistroPetStorage.addRecipeToHistory) return;
         window.BistroPetStorage.addRecipeToHistory(currentGeneratedRecipe);
         event.currentTarget.textContent = "Salvo";
         event.currentTarget.disabled = true;
-      });
-      document.getElementById("openRecipeHistory").addEventListener("click", () => {
-        showHistoryList();
-        recipeHistoryPanel.hidden = false;
-      });
-      document.getElementById("closeRecipeHistory").addEventListener("click", () => {
-        recipeHistoryPanel.hidden = true;
-      });
-      recipeHistoryPanel.addEventListener("click", event => {
-        if (event.target === recipeHistoryPanel) recipeHistoryPanel.hidden = true;
+	      });
+	      document.getElementById("listenRecipe").addEventListener("click", () => {
+	        if (currentGeneratedRecipe && window.BistroPetAccessibility) {
+	          window.BistroPetAccessibility.speakRecipe(currentGeneratedRecipe);
+	        }
+	      });
+	      document.getElementById("stopRecipeAudio").addEventListener("click", () => {
+	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
+	      });
+	      document.getElementById("openRecipeHistory").addEventListener("click", () => {
+	        showHistoryList();
+	        recipeHistoryPanel.hidden = false;
+	        document.getElementById("closeRecipeHistory").focus();
+	      });
+	      document.getElementById("closeRecipeHistory").addEventListener("click", () => {
+	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
+	        recipeHistoryPanel.hidden = true;
+	      });
+	      recipeHistoryPanel.addEventListener("click", event => {
+	        if (event.target === recipeHistoryPanel) {
+	          if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
+	          recipeHistoryPanel.hidden = true;
+	        }
       });
       recipeHistoryList.addEventListener("click", event => {
         const entry = event.target.closest("[data-history-id]");

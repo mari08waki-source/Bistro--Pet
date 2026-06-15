@@ -57,7 +57,11 @@
       #weeklyPlanner .custom-blocked-title { color: #9a5147; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
       #weeklyPlanner .custom-blocked-card .custom-ingredient-row { display: grid; margin-top: 0; border-color: rgba(177, 91, 82, 0.24); background: rgba(255, 250, 247, 0.82); box-shadow: none; }
       #weeklyPlanner .custom-blocked-card .custom-ingredient-row button { background: #efd1c9; color: #8b473e; }
-      #weeklyPlanner .custom-blocked-card .custom-chip-list { display: flex; }
+	      #weeklyPlanner .custom-blocked-card .custom-chip-list { display: flex; }
+	      #weeklyPlanner .weekly-audio-actions { margin-top: 10px; }
+	      #weeklyPlanner:not(.is-generated) .weekly-audio-actions { display: none; }
+	      #weeklyPlanner .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
+	      #weeklyPlanner .ingredient-list li { display: block; width: 100%; }
     </style>
   </head>
   <body class="session-three-body">
@@ -101,16 +105,21 @@
             <p>O chef está organizando a próxima semana</p>
           </div>
 
-          <div class="weekly-result-card" id="weeklyResultCard">
-            <span class="recipe-note">Plano assinado pelo chef</span>
-            <h2>Plano delicado da Luna</h2>
-            <div class="weekly-days" id="weeklyDays"></div>
+	          <div class="weekly-result-card" id="weeklyResultCard" role="region" aria-live="polite" aria-labelledby="weeklyPlanTitle">
+	            <span class="recipe-note">Plano assinado pelo chef</span>
+	            <h2 id="weeklyPlanTitle">Plano semanal da Luna</h2>
+	            <div class="audio-actions weekly-audio-actions">
+	              <button class="audio-button" id="listenWeeklyPlan" type="button" data-audio-listen aria-label="Ouvir plano semanal">🔊 Ouvir Plano</button>
+	              <button class="audio-button" id="stopWeeklyAudio" type="button" data-audio-stop aria-label="Parar leitura do plano semanal" hidden>⏹️ Parar</button>
+	            </div>
+	            <div class="weekly-days" id="weeklyDays"></div>
           </div>
         </div>
       </section>
     </main>
 
-    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
+	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
+	    <script src="./bistropet-accessibility.js"></script>
     <script>
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
@@ -141,7 +150,7 @@
           </div>
         ` : "";
         return `
-          <article class="week-day-card" role="button" tabindex="0" data-expandable-day>
+	          <article class="week-day-card" role="button" tabindex="0" data-expandable-day aria-expanded="${open ? "true" : "false"}" aria-label="${day}: ${title}">
             <img src="${image || imagePreparingSrc}" alt="${title}" onerror="this.onerror=null;this.src='./recipe-weekly-neutral-photo.png'" />
             <div>
               <strong>${day}</strong>
@@ -168,13 +177,22 @@
       const allowedIngredientTerms = [
         ["frango", "Frango"],
         ["carne", "Carne"],
-        ["carne bovina", "Carne bovina"],
-        ["patinho", "Patinho"],
+        ["carne bovina", "Carne"],
+        ["patinho", "Carne"],
+        ["acem", "Carne"],
+        ["acém", "Carne"],
+        ["musculo", "Carne"],
+        ["músculo", "Carne"],
         ["peru", "Peru"],
-        ["tilapia", "Tilápia"],
-        ["tilápia", "Tilápia"],
-        ["salmao", "Salmão"],
-        ["salmão", "Salmão"],
+        ["tilapia", "Peixe"],
+        ["tilápia", "Peixe"],
+        ["salmao", "Peixe"],
+        ["salmão", "Peixe"],
+        ["pacu", "Peixe"],
+        ["traira", "Peixe"],
+        ["traíra", "Peixe"],
+        ["peito de frango", "Frango"],
+        ["sobrecoxa", "Frango"],
         ["mandioca", "Mandioca"],
         ["aipim", "Mandioca"],
         ["macaxeira", "Mandioca"],
@@ -200,42 +218,11 @@
         ["selga", "Selga"],
         ["mandioquinha", "Mandioquinha"]
       ];
-      const planNames = ["Bowl leve", "Menu delicado", "Prato bistrô", "Combinação suave", "Receita aconchegante"];
-      const customPlanNames = [
-        "Bowl delicado",
-        "Menu morno",
-        "Menu suave",
-        "Prato leve",
-        "Mix bistro",
-        "Jardim macio",
-        "Receita de chef"
-      ];
-      const textureNotes = ["textura cremosa", "preparo macio", "base úmida", "cubos delicados", "lascas suaves", "mistura aveludada", "porção leve"];
-      const presentationNotes = ["em bowl baixo", "com finalização central", "em camadas delicadas", "com base cremosa", "em porção compacta", "com toque rústico", "em montagem suave"];
-      const prepTemplates = [
-        "Cozinhe os ingredientes listados separadamente até ficarem macios, una em textura delicada e sirva morno.",
-        "Prepare os ingredientes listados em cocção lenta, corte suavemente e finalize sem temperos fortes.",
-        "Cozinhe bem os ingredientes, una em pequenas porções e ajuste a umidade antes de servir.",
-        "Deixe tudo bem macio, misture com cuidado e ofereça em temperatura confortável.",
-        "Cozinhe a base principal, incorpore os demais itens listados no final e sirva com textura úmida.",
-        "Prepare os ingredientes em cubos pequenos, una tudo ainda morno e aguarde esfriar levemente.",
-        "Cozinhe até ficar macio, solte em lascas delicadas quando necessário e sirva em pequenas porções."
-      ];
       const weeklyCatalog = {
-        protein: ["Frango", "Peixe", "Patinho", "Ovos", "Peru", "Tilápia", "Carne bovina"],
+        protein: ["Carne", "Frango", "Peixe"],
         base: ["Arroz", "Mandioquinha", "Mandioca", "Batata", "Batata doce", "Quinoa", "Inhame", "Aveia"],
         vegetable: ["Abobrinha", "Chuchu", "Abóbora", "Cenoura", "Pepino", "Vagem", "Couve"]
       };
-
-      const customChefNotesClean = [
-        "Observa\u00e7\u00e3o do chef: uma abertura delicada para a semana, feita sob medida para a Luna.",
-        "Observa\u00e7\u00e3o do chef: preparo leve, com contraste suave de textura e apresenta\u00e7\u00e3o acolhedora.",
-        "Observa\u00e7\u00e3o do chef: combina\u00e7\u00e3o pensada para variar sem sair dos ingredientes escolhidos.",
-        "Observa\u00e7\u00e3o do chef: por\u00e7\u00e3o elegante, macia e confort\u00e1vel para uma rotina especial.",
-        "Observa\u00e7\u00e3o do chef: montagem com toque de bistr\u00f4, respeitando a lista personalizada.",
-        "Observa\u00e7\u00e3o do chef: receita aconchegante, ideal para servir morna e bem equilibrada.",
-        "Observa\u00e7\u00e3o do chef: fechamento da semana com composi\u00e7\u00e3o simples, bonita e cuidadosa."
-      ];
 
       function normalize(value) {
         return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -262,6 +249,30 @@
 
       function cleanCustomIngredient(value) {
         return String(value || "").trim().replace(/\s+/g, " ");
+      }
+
+      function simpleWeeklyIngredient(value) {
+        const item = cleanCustomIngredient(value);
+        const clean = normalize(item);
+        if (/\b(figado de boi|figado bovino)\b/.test(clean)) return "Fígado de boi";
+        if (/\b(figado de galinha|figado de frango)\b/.test(clean)) return "Fígado de galinha";
+        return item;
+      }
+
+      function weeklyProteinFamily(value) {
+        const clean = normalize(simpleWeeklyIngredient(value));
+        if (/\b(tilapia|pescada|merluza|salmao|pacu|traira|peixe)\b/.test(clean)) return "peixe";
+        if (/\b(frango|peito de frango|sobrecoxa)\b/.test(clean)) return "frango";
+        if (/\b(patinho|musculo|coxao mole|carne bovina magra|carne bovina|acem|carne)\b/.test(clean)) return "carne";
+        return "";
+      }
+
+      function weeklyPreparedIngredientName(value) {
+        return normalize(simpleWeeklyIngredient(value))
+          .replace(/\b(cozido|cozida|cozidos|cozidas|desfiado|desfiada|desfiados|desfiadas)\b/g, "")
+          .replace(/\be\b/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
       }
 
       function cleanCustomIngredientList(value) {
@@ -296,12 +307,13 @@
       }
 
       function isRestricted(ingredient, restrictions) {
-        const cleanIngredient = normalize(ingredient);
+        const cleanIngredient = weeklyPreparedIngredientName(ingredient);
         return restrictions.some(item => {
-          const cleanRestriction = normalize(item);
+          const cleanRestriction = weeklyPreparedIngredientName(item);
           if (!cleanIngredient || !cleanRestriction) return false;
           if (cleanIngredient === cleanRestriction) return true;
-          return cleanRestriction === "peixe" && /\b(peixe|tilapia|salmao)\b/.test(cleanIngredient);
+          return ["carne", "peixe", "frango"].includes(cleanRestriction)
+            && cleanRestriction === weeklyProteinFamily(ingredient);
         });
       }
 
@@ -314,7 +326,7 @@
       }
 
       function uniqueIngredients(items) {
-        return items.map(item => String(item || "").trim()).filter(Boolean).filter((item, itemIndex, list) => {
+        return items.map(simpleWeeklyIngredient).filter(Boolean).filter((item, itemIndex, list) => {
           const cleanItem = normalize(item);
           return list.findIndex(candidate => normalize(candidate) === cleanItem) === itemIndex;
         });
@@ -404,21 +416,99 @@
       }
 
       function activeWeeklyRestrictions(profile) {
-        return restrictionTerms(profile || {});
+        return uniqueIngredients([
+          ...restrictionTerms(profile || {}),
+          ...customBlockedIngredients
+        ]);
       }
 
       function ingredientCategory(ingredient) {
         const cleanIngredient = normalize(ingredient);
-        if (["frango", "peixe", "patinho", "ovos", "ovo", "carne", "peru", "tilapia", "salmao"].some(term => cleanIngredient.includes(term))) return "protein";
+        if (weeklyProteinFamily(ingredient) || ["ovos", "ovo", "peru"].some(term => cleanIngredient.includes(term))) return "protein";
         if (["arroz", "racao", "ração", "mandioquinha", "mandioca", "aipim", "macaxeira", "batata doce", "batata", "quinoa", "inhame", "aveia"].some(term => cleanIngredient.includes(term))) return "base";
         if (["abobrinha", "chuchu", "abobora", "cenoura", "pepino", "vagem", "beterraba", "couve"].some(term => cleanIngredient.includes(term))) return "vegetable";
         return "";
       }
 
       function proteinFamily(ingredient) {
-        const cleanIngredient = normalize(ingredient);
-        if (/\b(peixe|tilapia|salmao)\b/.test(cleanIngredient)) return "peixe";
-        return cleanIngredient;
+        return weeklyProteinFamily(ingredient) || normalize(simpleWeeklyIngredient(ingredient));
+      }
+
+      function weeklyNaturalList(items) {
+        const names = uniqueIngredients(items).map(item => item.toLowerCase());
+        if (names.length < 2) return names[0] || "os ingredientes";
+        return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+      }
+
+      function weeklyRecipeTitle(ingredients) {
+        const items = uniqueIngredients(ingredients);
+        if (!items.length) return "Receita da semana";
+        const [main, ...others] = items;
+        return `${main.charAt(0).toUpperCase()}${main.slice(1).toLowerCase()}${others.length ? ` com ${weeklyNaturalList(others)}` : ""}`;
+      }
+
+      function generatedWeeklyProteinName(item, offset, restrictions) {
+        const family = weeklyProteinFamily(item);
+        const simpleName = normalize(simpleWeeklyIngredient(item));
+        const options = {
+          carne: ["Patinho cozido e desfiado", "Músculo cozido e desfiado", "Coxão mole cozido e desfiado", "Carne bovina magra cozida e desfiada"],
+          peixe: ["Tilápia cozida e desfiada", "Pescada cozida e desfiada", "Merluza cozida e desfiada"],
+          frango: ["Frango cozido e desfiado"]
+        };
+        if (!family || !options[family]) return simpleWeeklyIngredient(item);
+        if (!["carne", "peixe", "frango"].includes(simpleName)) {
+          const feminine = /\b(tilapia|pescada|merluza|carne bovina magra)\b/.test(simpleName);
+          const simple = simpleWeeklyIngredient(item);
+          return `${simple.charAt(0).toUpperCase()}${simple.slice(1)} ${feminine ? "cozida e desfiada" : "cozido e desfiado"}`;
+        }
+        const allowed = options[family].filter(option => !isRestricted(option, restrictions));
+        if (allowed.length) return allowed[offset % allowed.length];
+        if (isRestricted(simpleWeeklyIngredient(item), restrictions)) return "";
+        const simple = simpleWeeklyIngredient(item);
+        return family === "carne" ? "Carne cozida e desfiada" : `${simple.charAt(0).toUpperCase()}${simple.slice(1)} cozido e desfiado`;
+      }
+
+      function generatedWeeklyIngredients(items, dayIndex, restrictions) {
+        return uniqueIngredients(items.map((item, index) =>
+          ingredientCategory(item) === "protein"
+            ? generatedWeeklyProteinName(item, dayIndex + index, restrictions)
+            : item
+        ));
+      }
+
+      function weeklyIsGrain(ingredient) {
+        return /\b(arroz|quinoa|aveia|racao)\b/.test(normalize(ingredient));
+      }
+
+      function weeklyMeatEnding(items) {
+        if (items.length > 1) return "ficarem bem cozidos";
+        return normalize(items[0]) === "carne" ? "ficar bem cozida" : "ficar bem cozido";
+      }
+
+      function weeklySideEnding(items) {
+        const feminine = /\b(batata|batata doce|cenoura|mandioca|mandioquinha|abobora|abobrinha|quinoa|aveia|couve|vagem)\b/;
+        const allFeminine = items.every(item => feminine.test(normalize(item)));
+        if (items.length > 1) return allFeminine ? "ficarem macias" : "ficarem macios";
+        return allFeminine ? "ficar macia" : "ficar macio";
+      }
+
+      function weeklyPrep(ingredients) {
+        const items = uniqueIngredients(ingredients);
+        const meats = items.filter(item => ingredientCategory(item) === "protein");
+        const fish = meats.filter(item => normalize(item) === "peixe");
+        const eggs = meats.filter(item => /\bovo|ovos\b/.test(normalize(item)));
+        const otherMeats = meats.filter(item => !fish.includes(item) && !eggs.includes(item));
+        const sides = items.filter(item => ingredientCategory(item) !== "protein");
+        const cutSides = sides.filter(item => !weeklyIsGrain(item));
+        const steps = ["Separe todos os ingredientes."];
+        if (cutSides.length) steps.push(`Corte ${weeklyNaturalList(cutSides)} em cubinhos pequenos.`);
+        if (otherMeats.length) steps.push(`Corte ${weeklyNaturalList(otherMeats)} em pedaços pequenos e cozinhe até ${weeklyMeatEnding(otherMeats)}.`);
+        if (fish.length) steps.push(`Cozinhe ${weeklyNaturalList(fish)} até ${weeklyMeatEnding(fish)} e retire todas as espinhas.`);
+        if (eggs.length) steps.push(`Cozinhe ${weeklyNaturalList(eggs)}, retire a casca e pique em pedaços pequenos.`);
+        if (sides.length) steps.push(`Cozinhe ${weeklyNaturalList(sides)} com água até ${weeklySideEnding(sides)}.`);
+        steps.push(`Misture ${weeklyNaturalList(items)}.`);
+        steps.push("Espere amornar até a temperatura ambiente e sirva.");
+        return steps.join(" ");
       }
 
       function uniqueProteinFamilies(items) {
@@ -462,7 +552,15 @@
           .filter(item => !isRestricted(item, restrictions))
           .filter(item => ingredientCategory(item));
 
-        if (!hasCategory(ingredients, "protein")) addFirstSafe(ingredients, "protein", restrictions, offset, avoidIngredients);
+        const simpleProteins = safeCatalog("protein", restrictions, offset);
+        const currentProtein = ingredients.find(item => ingredientCategory(item) === "protein");
+        if (!currentProtein || !simpleProteins.some(item => normalize(item) === normalize(currentProtein))) {
+          const replacement = simpleProteins.find(item => !avoidIngredients.some(avoid => isRestricted(item, [avoid]) || isRestricted(avoid, [item])));
+          const withoutProtein = ingredients.filter(item => ingredientCategory(item) !== "protein");
+          ingredients.length = 0;
+          ingredients.push(...withoutProtein);
+          if (replacement) ingredients.unshift(replacement);
+        }
         if (!hasCategory(ingredients, "base")) addFirstSafe(ingredients, "base", restrictions, offset + 1, avoidIngredients);
         if (!hasCategory(ingredients, "vegetable")) addFirstSafe(ingredients, "vegetable", restrictions, offset + 2, avoidIngredients);
 
@@ -566,14 +664,15 @@
         return fallback;
       }
 
-      function toggleDayDetails(card) {
+	      function toggleDayDetails(card) {
         const details = card.querySelector(".week-day-details");
         if (!details) return;
         const shouldOpen = details.hidden;
         weeklyDays.querySelectorAll(".week-day-details").forEach(item => {
           item.hidden = true;
         });
-        details.hidden = !shouldOpen;
+	        details.hidden = !shouldOpen;
+	        card.setAttribute("aria-expanded", String(shouldOpen));
       }
 
       function weeklySourceIngredients(profile, customMode) {
@@ -595,41 +694,26 @@
         let previousIngredients = [];
 
         return dayNames.map((day, index) => {
-          const ingredients = uniqueWeeklyIngredients({
+          const selectedIngredients = uniqueWeeklyIngredients({
             pool,
             activeRestrictions,
             dayIndex: index,
             usedCombinations,
             previousIngredients
           });
-          previousIngredients = ingredients;
-          const protein = customMode ? (ingredients[0] || "ingrediente permitido") : ingredients.find(item => ingredientCategory(item) === "protein") || ingredients[0] || "proteína permitida";
-          const base = customMode ? (ingredients[1] || protein) : ingredients.find(item => ingredientCategory(item) === "base") || ingredients[1] || protein;
-          const vegetable = customMode ? (ingredients[2] || base) : ingredients.find(item => ingredientCategory(item) === "vegetable") || ingredients[2] || base;
-          let titlePrefixIndex = index;
-          let title = "";
-          do {
-            title = customMode
-              ? `${customPlanNames[titlePrefixIndex % customPlanNames.length]} de ${protein.toLowerCase()} com ${base.toLowerCase()} e ${vegetable.toLowerCase()}`
-              : `${planNames[titlePrefixIndex % planNames.length]} de ${protein.toLowerCase()} com ${base.toLowerCase()} e ${vegetable.toLowerCase()}`;
-            titlePrefixIndex += 1;
-          } while (usedTitles.has(normalize(title)) && titlePrefixIndex < index + 14);
+          previousIngredients = selectedIngredients;
+          const ingredients = generatedWeeklyIngredients(selectedIngredients, index, activeRestrictions);
+          const title = weeklyRecipeTitle(ingredients);
           usedTitles.add(normalize(title));
-          const prep = customMode
-            ? `${prepTemplates[index % prepTemplates.length]} Finalize com ${textureNotes[index % textureNotes.length]} ${presentationNotes[index % presentationNotes.length]}.`
-            : prepTemplates[index % prepTemplates.length];
-          const ingredientText = ingredients.join(", ");
-          const safeTitle = hasRestrictedText(title, activeRestrictions) ? `${customMode ? customPlanNames[index % customPlanNames.length] : planNames[index % planNames.length]} personalizado` : title;
-          const safePrep = hasRestrictedText(prep, activeRestrictions) ? prepTemplates[(index + 1) % prepTemplates.length] : prep;
-          const safeCustomNote = customMode && hasRestrictedText(customChefNotesClean[index % customChefNotesClean.length], activeRestrictions) ? "Observa\u00e7\u00e3o do chef: receita personalizada, leve e fiel aos ingredientes permitidos." : customChefNotesClean[index % customChefNotesClean.length];
+          const prep = weeklyPrep(ingredients);
           return {
             day,
-            title: safeTitle,
+            title,
             ingredients,
-            prep: `${safePrep} Ingredientes usados: ${ingredientText}.`,
-            customNote: customMode ? safeCustomNote : "",
+            prep,
+            customNote: "",
             note: `Observação do chef: plano pensado para ${profile.name || "seu pet"}, respeitando ${profile.age || "a idade"}, ${profile.weight || "o peso"} e mantendo fora do preparo os ingredientes bloqueados.`,
-            image: imageForRecipe({ title: safeTitle, ingredients }, index),
+            image: imageForRecipe({ title, ingredients }, index),
             profile: {
               name: profile.name || "seu pet",
               size: profile.size,
@@ -684,7 +768,8 @@
         } catch (error) {}
       }
 
-      function clearWeeklyPlanState() {
+	      function clearWeeklyPlanState() {
+	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
         currentPlan = [];
         activeDayIndex = null;
         weeklyDays.innerHTML = "";
@@ -699,7 +784,7 @@
         weeklyDays.innerHTML = `
           <div class="day-tabs" aria-label="Dias da semana">
             ${plan.map((item, index) => `
-              <button class="day-tab${activeDayIndex === index ? " active" : ""}" type="button" data-day-index="${index}">
+	              <button class="day-tab${activeDayIndex === index ? " active" : ""}" type="button" data-day-index="${index}" aria-pressed="${activeDayIndex === index ? "true" : "false"}" aria-label="${item.day}: ${item.title}">
                 ${shortDayName(item.day)}
               </button>
             `).join("")}
@@ -716,13 +801,21 @@
             </div>`}
           </div>
         `;
-        weeklyDays.querySelectorAll("[data-day-index]").forEach(button => {
-          button.addEventListener("click", () => {
-            const nextIndex = Number(button.dataset.dayIndex);
-            activeDayIndex = activeDayIndex === nextIndex ? null : nextIndex;
-            renderProfileWeeklyPlan(currentPlan);
-          });
-        });
+	        weeklyDays.querySelectorAll("[data-day-index]").forEach(button => {
+	          button.addEventListener("click", () => {
+	            const nextIndex = Number(button.dataset.dayIndex);
+	            activeDayIndex = activeDayIndex === nextIndex ? null : nextIndex;
+	            renderProfileWeeklyPlan(currentPlan);
+	          });
+	        });
+	        weeklyDays.querySelectorAll("[data-expandable-day]").forEach(card => {
+	          card.addEventListener("click", () => toggleDayDetails(card));
+	          card.addEventListener("keydown", event => {
+	            if (event.key !== "Enter" && event.key !== " ") return;
+	            event.preventDefault();
+	            toggleDayDetails(card);
+	          });
+	        });
         weeklyPlanner.classList.add("is-generated");
         if (window.BistroPetStorage && window.BistroPetStorage.saveWeeklyPlan) {
           window.BistroPetStorage.saveWeeklyPlan(currentPlan);
@@ -734,7 +827,7 @@
         const article = normalize(name).endsWith("a") ? "da" : "do";
         document.querySelector(".chef-pet-card strong").textContent = name;
         document.querySelector(".weekly-heading h1").textContent = `O chef vai organizar a semana ${article} ${name}.`;
-        document.querySelector(".weekly-result-card h2").textContent = `Plano delicado ${article} ${name}`;
+        document.querySelector(".weekly-result-card h2").textContent = `Plano semanal ${article} ${name}`;
       }
 
       function updateModeState() {
@@ -779,7 +872,15 @@
       updateModeState();
       document.getElementById("weeklyAuto").addEventListener("change", updateModeState);
       document.getElementById("weeklyCustom").addEventListener("change", updateModeState);
-      createWeekPlanButton.addEventListener("click", generateProfileWeeklyPlan);
+	      createWeekPlanButton.addEventListener("click", generateProfileWeeklyPlan);
+	      document.getElementById("listenWeeklyPlan").addEventListener("click", () => {
+	        if (currentPlan.length && window.BistroPetAccessibility) {
+	          window.BistroPetAccessibility.speakWeeklyPlan(currentPlan);
+	        }
+	      });
+	      document.getElementById("stopWeeklyAudio").addEventListener("click", () => {
+	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
+	      });
     </script>
   </body>
 </html>
