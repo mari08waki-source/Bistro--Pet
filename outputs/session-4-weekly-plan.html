@@ -99,7 +99,7 @@
         </div>
 
         <div class="weekly-kitchen-stage">
-          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha premium do Bistro Pet preparando o plano semanal" />
+          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha do Bistro Pet preparando o plano semanal" />
           <div class="frosted-message weekly-empty-message">
             <span>Bistro em preparo</span>
             <p>O chef está organizando a próxima semana</p>
@@ -177,32 +177,16 @@
       const allowedIngredientTerms = [
         ["frango", "Frango"],
         ["carne", "Carne"],
-        ["carne bovina", "Carne"],
-        ["patinho", "Carne"],
-        ["acem", "Carne"],
-        ["acém", "Carne"],
-        ["musculo", "Carne"],
-        ["músculo", "Carne"],
         ["peru", "Peru"],
-        ["tilapia", "Peixe"],
-        ["tilápia", "Peixe"],
-        ["salmao", "Peixe"],
-        ["salmão", "Peixe"],
-        ["pacu", "Peixe"],
-        ["traira", "Peixe"],
-        ["traíra", "Peixe"],
-        ["peito de frango", "Frango"],
-        ["sobrecoxa", "Frango"],
         ["mandioca", "Mandioca"],
         ["aipim", "Mandioca"],
         ["macaxeira", "Mandioca"],
         ["inhame", "Inhame"],
         ["aveia", "Aveia"],
         ["pepino", "Pepino"],
-        ["racao", "Ração"],
-        ["ração", "Ração"],
+        ["racao", "Racao"],
         ["arroz", "Arroz"],
-        ["abobora", "Abóbora"],
+        ["abobora", "Abobora"],
         ["peixe", "Peixe"],
         ["batata doce", "Batata doce"],
         ["batata", "Batata"],
@@ -261,9 +245,9 @@
 
       function weeklyProteinFamily(value) {
         const clean = normalize(simpleWeeklyIngredient(value));
-        if (/\b(tilapia|pescada|merluza|salmao|pacu|traira|peixe)\b/.test(clean)) return "peixe";
-        if (/\b(frango|peito de frango|sobrecoxa)\b/.test(clean)) return "frango";
-        if (/\b(patinho|musculo|coxao mole|carne bovina magra|carne bovina|acem|carne)\b/.test(clean)) return "carne";
+        if (/\bpeixe\b/.test(clean)) return "peixe";
+        if (/\bfrango\b/.test(clean)) return "frango";
+        if (/\bcarne\b/.test(clean)) return "carne";
         return "";
       }
 
@@ -449,23 +433,16 @@
 
       function generatedWeeklyProteinName(item, offset, restrictions) {
         const family = weeklyProteinFamily(item);
-        const simpleName = normalize(simpleWeeklyIngredient(item));
         const options = {
-          carne: ["Patinho cozido e desfiado", "Músculo cozido e desfiado", "Coxão mole cozido e desfiado", "Carne bovina magra cozida e desfiada"],
-          peixe: ["Tilápia cozida e desfiada", "Pescada cozida e desfiada", "Merluza cozida e desfiada"],
-          frango: ["Frango cozido e desfiado"]
+          carne: "Carne cozida e desfiada",
+          peixe: "Peixe cozido e desfiado",
+          frango: "Frango cozido e desfiado"
         };
         if (!family || !options[family]) return simpleWeeklyIngredient(item);
-        if (!["carne", "peixe", "frango"].includes(simpleName)) {
-          const feminine = /\b(tilapia|pescada|merluza|carne bovina magra)\b/.test(simpleName);
-          const simple = simpleWeeklyIngredient(item);
-          return `${simple.charAt(0).toUpperCase()}${simple.slice(1)} ${feminine ? "cozida e desfiada" : "cozido e desfiado"}`;
-        }
-        const allowed = options[family].filter(option => !isRestricted(option, restrictions));
-        if (allowed.length) return allowed[offset % allowed.length];
-        if (isRestricted(simpleWeeklyIngredient(item), restrictions)) return "";
-        const simple = simpleWeeklyIngredient(item);
-        return family === "carne" ? "Carne cozida e desfiada" : `${simple.charAt(0).toUpperCase()}${simple.slice(1)} cozido e desfiado`;
+        const label = family === "carne" ? "Carne" : family === "peixe" ? "Peixe" : "Frango";
+        return isRestricted(label, restrictions) || isRestricted(simpleWeeklyIngredient(item), restrictions)
+          ? ""
+          : options[family];
       }
 
       function generatedWeeklyIngredients(items, dayIndex, restrictions) {

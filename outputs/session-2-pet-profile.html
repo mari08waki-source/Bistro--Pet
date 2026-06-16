@@ -55,22 +55,14 @@
             Porte
             <input name="size" />
           </label>
-          <section class="menu-style" aria-label="Estilo do card&aacute;pio">
-            <span class="menu-style-title">Estilo do card&aacute;pio</span>
-            <input class="mode-radio" type="radio" name="menu-style" id="freeProfile" checked />
-            <input class="mode-radio" type="radio" name="menu-style" id="customProfile" />
-            <div class="mode-options">
-              <label class="mode-option" for="freeProfile">
-                <span>
-                  <strong>Perfil Livre</strong>
-                  <small>Para pets sem prefer&ecirc;ncias espec&iacute;ficas.</small>
-                </span>
-                <span class="switch" aria-hidden="true"></span>
-              </label>
-              <label class="mode-option" for="customProfile">
-                <span>
-                  <strong>Perfil Personalizado</strong>
-                  <small>Quando existe algum cuidado ou prefer&ecirc;ncia especial.</small>
+	          <section class="menu-style" aria-label="Estilo do card&aacute;pio">
+	            <span class="menu-style-title">Estilo do card&aacute;pio</span>
+	            <input class="mode-radio" type="checkbox" name="menu-style" id="customProfile" />
+	            <div class="mode-options">
+	              <label class="mode-option" for="customProfile">
+	                <span>
+	                  <strong>Perfil Personalizado</strong>
+                  <small>Ligue se o seu pet tiver alguma restri&ccedil;&atilde;o alimentar, alergia ou recomenda&ccedil;&atilde;o veterin&aacute;ria.</small>
                 </span>
                 <span class="switch" aria-hidden="true"></span>
               </label>
@@ -90,11 +82,10 @@
 	    <script src="./bistropet-accessibility.js"></script>
     <script>
       const petProfileForm = document.getElementById("petProfileForm");
-      const savePetProfileButton = document.getElementById("savePetProfile");
-      const observationCard = document.getElementById("observationCard");
-      const observationField = petProfileForm.elements.notes;
-      const freeProfile = document.getElementById("freeProfile");
-      const customProfile = document.getElementById("customProfile");
+	      const savePetProfileButton = document.getElementById("savePetProfile");
+	      const observationCard = document.getElementById("observationCard");
+	      const observationField = petProfileForm.elements.notes;
+	      const customProfile = document.getElementById("customProfile");
       const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
       const observationFoodWords = [
         "mandioquinha", "beterraba", "abobrinha", "mandioca", "cenoura", "batata", "frango",
@@ -146,8 +137,8 @@
         [...petProfileForm.elements].forEach(field => {
           if (field.matches && field.matches("input:not([type='radio']), textarea")) field.value = "";
         });
-        freeProfile.checked = true;
-        syncProfileModeFields();
+	        customProfile.checked = false;
+	        syncProfileModeFields();
       }
 
       function fillPetProfileForm() {
@@ -160,8 +151,8 @@
           const field = petProfileForm.elements[key];
           if (field) field.value = value;
         });
-        document.getElementById(profile.menuStyle === "personalizada" ? "customProfile" : "freeProfile").checked = true;
-        syncProfileModeFields();
+	        customProfile.checked = profile.menuStyle === "personalizada";
+	        syncProfileModeFields();
       }
 
       function collectPetProfileForm() {
@@ -187,12 +178,10 @@
         window.location.href = `./session-3-meal.html?v=visible-blocked-list-${Date.now()}`;
       }
 
-      [freeProfile, customProfile].forEach(input => {
-        input.addEventListener("change", () => {
-          syncProfileModeFields();
-          savePetProfile();
-        });
-      });
+	      customProfile.addEventListener("change", () => {
+	        syncProfileModeFields();
+	        savePetProfile();
+	      });
       observationField.addEventListener("input", () => {
         const original = observationField.value;
         const normalized = normalizeObservationSeparators(original);
@@ -206,8 +195,8 @@
         { name: "tutor", next: "name", minimumLength: 2 },
         { name: "name", next: "age", minimumLength: 2 },
         { name: "age", next: "weight", minimumLength: 1 },
-        { name: "weight", next: "size", minimumLength: 1 },
-        { name: "size", next: "freeProfile", minimumLength: 3 }
+	        { name: "weight", next: "size", minimumLength: 1 },
+	        { name: "size", next: "customProfile", minimumLength: 3 }
       ];
       autoAdvanceFields.forEach(({ name, next, minimumLength }) => {
         const field = petProfileForm.elements[name];
