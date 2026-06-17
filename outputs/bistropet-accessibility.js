@@ -9,6 +9,68 @@
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
+  function normalize(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function profilePortionSize() {
+    const profile = window.BistroPetStorage && window.BistroPetStorage.getPetProfile
+      ? window.BistroPetStorage.getPetProfile()
+      : {};
+    const weightText = String(profile.weight || "").replace(",", ".");
+    const weightMatch = weightText.match(/\d+(?:\.\d+)?/);
+    const weight = weightMatch ? Number(weightMatch[0]) : 0;
+    if (weight > 0 && weight <= 10) return "small";
+    if (weight > 10 && weight <= 25) return "medium";
+    if (weight > 25) return "large";
+    const size = normalize(profile.size || "");
+    if (/\b(pequeno|pequena|small)\b/.test(size)) return "small";
+    if (/\b(grande|large)\b/.test(size)) return "large";
+    return "medium";
+  }
+
+  function ingredientCategory(item) {
+    const clean = normalize(item);
+    if (/\b(frango|peixe|carne|peru|ovo|ovos|figado)\b/.test(clean)) return "protein";
+    if (/\b(arroz|quinoa|aveia|milho|racao)\b/.test(clean)) return "grain";
+    if (/\b(batata|batata doce|mandioca|mandioquinha|inhame|abobora)\b/.test(clean)) return "base";
+    return "vegetable";
+  }
+
+  function ingredientPortionGrams(item) {
+    const portions = {
+      small: { protein: 80, base: 50, vegetable: 40, grain: 30 },
+      medium: { protein: 120, base: 75, vegetable: 60, grain: 45 },
+      large: { protein: 160, base: 100, vegetable: 80, grain: 60 }
+    };
+    const size = profilePortionSize();
+    return portions[size][ingredientCategory(item)] || portions[size].vegetable;
+  }
+
+  function cleanIngredientForSpeech(item) {
+    return cleanText(item).replace(/^\d+\s*g(?:ramas?)?\s+de\s+/i, "");
+  }
+
+  function ingredientText(item) {
+    const ingredient = cleanIngredientForSpeech(item).toLowerCase();
+    if (!ingredient) return "";
+    return `${ingredientPortionGrams(item)} gramas de ${ingredient}`;
+  }
+
+  function ingredientsText(ingredients) {
+    const spokenIngredients = ingredients.map(ingredientText).filter(Boolean);
+    return spokenIngredients.length ? `Ingredientes. ${spokenIngredients.join(". ")}.` : "";
+  }
+
+  function preparationText(steps) {
+    const spokenSteps = steps.map(cleanText).filter(Boolean);
+    return spokenSteps.length ? `Modo de preparo. ${spokenSteps.join(" ")}` : "";
+  }
+
   function updateAudioControls() {
     document.querySelectorAll("[data-audio-listen]").forEach(button => {
       button.setAttribute("aria-pressed", reading ? "true" : "false");
@@ -93,8 +155,8 @@
     const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
     return [
       `Receita: ${cleanText(recipe.title)}.`,
-      ingredients.length ? `Ingredientes e quantidades: ${ingredients.map((item, index) => `${index + 1}. ${cleanText(item)}`).join(". ")}.` : "",
-      steps.length ? `Modo de preparo: ${steps.map((item, index) => `Passo ${index + 1}. ${cleanText(item)}`).join(". ")}.` : ""
+      ingredientsText(ingredients),
+      preparationText(steps)
     ].filter(Boolean).join(" ");
   }
 
@@ -103,11 +165,11 @@
     return [
       "Plano semanal.",
       ...plan.map(item => {
-        const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map(cleanText).join(", ") : "";
+        const ingredients = Array.isArray(item.ingredients) ? ingredientsText(item.ingredients) : "";
         return [
           `${cleanText(item.day)}. ${cleanText(item.title)}.`,
-          ingredients ? `Ingredientes: ${ingredients}.` : "",
-          item.prep ? `Modo de preparo: ${cleanText(item.prep)}.` : ""
+          ingredients,
+          item.prep ? preparationText([item.prep]) : ""
         ].filter(Boolean).join(" ");
       })
     ].join(" ");

@@ -196,10 +196,10 @@
         </div>
 
         <div class="sleeping-kitchen">
-          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha do Bistro aguardando criacao" />
+          <img src="./session-3-sleeping-kitchen.png" alt="Cozinha do Bistro aguardando criação" />
           <div class="frosted-message">
             <span>Bistro em espera</span>
-            <p>O chef do bistro esta pronto para criar algo especial.</p>
+            <p>O chef do Bistro está pronto para criar algo especial.</p>
           </div>
         </div>
 
@@ -208,7 +208,7 @@
           <div class="result-copy">
             <span class="recipe-note">Criado agora pelo Bistro</span>
             <div class="recipe-title-row">
-              <h2 id="recipeName">Delicia suave de frango com abóbora</h2>
+              <h2 id="recipeName">Delícia suave de frango com abóbora</h2>
 	              <div class="recipe-title-actions">
 	                <button class="save-recipe" id="saveRecipeToHistory" type="button">Salvar</button>
 	                <button class="audio-button" id="listenRecipe" type="button" data-audio-listen aria-label="Ouvir receita">🔊 Ouvir</button>
@@ -249,14 +249,14 @@
     </div>
 
 	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
-	    <script src="./bistropet-accessibility.js"></script>
+	    <script src="./bistropet-accessibility.js?v=tts-natural-ingredients"></script>
     <script>
       const modeCopy = {
         personalizada: {
           title: "Personalizada",
           help: "Adicione ingredientes especiais e alimentos proibidos. O Bistro completa a receita com bases seguras.",
           names: ["Bowl personalizado", "Menu sob medida", "Prato do tutor", "Receita particular"],
-          note: "Receita adaptada aos ingredientes especiais e as restrições informadas."
+          note: "Receita adaptada aos ingredientes especiais e às restrições informadas."
         },
         chef: {
           title: "Sugestão do chef",
@@ -703,6 +703,37 @@
         return /\b(arroz|quinoa|aveia|milho)\b/.test(normalize(item));
       }
 
+      function profilePortionSize() {
+        const profile = window.BistroPetStorage ? window.BistroPetStorage.getPetProfile() : {};
+        const weightText = String(profile.weight || "").replace(",", ".");
+        const weightMatch = weightText.match(/\d+(?:\.\d+)?/);
+        const weight = weightMatch ? Number(weightMatch[0]) : 0;
+        if (weight > 0 && weight <= 10) return "small";
+        if (weight > 10 && weight <= 25) return "medium";
+        if (weight > 25) return "large";
+        const size = normalize(profile.size || "");
+        if (/\b(pequeno|pequena|small)\b/.test(size)) return "small";
+        if (/\b(grande|large)\b/.test(size)) return "large";
+        return "medium";
+      }
+
+      function ingredientPortionGrams(item) {
+        const portions = {
+          small: { protein: 80, base: 50, vegetable: 40, grain: 30 },
+          medium: { protein: 120, base: 75, vegetable: 60, grain: 45 },
+          large: { protein: 160, base: 100, vegetable: 80, grain: 60 }
+        };
+        const size = profilePortionSize();
+        if (isProteinIngredient(item)) return portions[size].protein;
+        if (isGrainIngredient(item)) return portions[size].grain;
+        if (/\b(batata|batata doce|mandioca|mandioquinha|inhame|abobora|abóbora|quinoa|aveia)\b/.test(normalize(item))) return portions[size].base;
+        return portions[size].vegetable;
+      }
+
+      function displayIngredientWithPortion(item) {
+        return `${ingredientPortionGrams(item)} g de ${item}`;
+      }
+
       function naturalList(items) {
         const names = uniqueItems(items).map(item => item.toLowerCase());
         if (names.length < 2) return names[0] || "os ingredientes";
@@ -752,7 +783,7 @@
           steps.push(`Cozinhe ${naturalList(otherMeats)} até ${cookedMeatEnding(otherMeats)}. Depois, desfie ou corte em pedaços pequenos.`);
         }
         if (fish.length) {
-          steps.push(`Cozinhe ${naturalList(fish)} por cerca de 20 minutos ou até ficar bem cozido. Retire cuidadosamente todas as espinhas e desfie ou corte em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalList(fish)} por aproximadamente 10 a 15 minutos. Retire cuidadosamente todas as espinhas e corte em pedaços pequenos.`);
         }
         if (eggs.length) {
           steps.push(`Cozinhe ${naturalList(eggs)}, retire a casca e pique em pedaços pequenos.`);
@@ -868,7 +899,7 @@
         const description = document.getElementById("recipeDescription");
         description.textContent = recipe.description;
         description.hidden = !recipe.description;
-        document.getElementById("resultIngredients").innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+        document.getElementById("resultIngredients").innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(displayIngredientWithPortion(item))}</li>`).join("");
         document.getElementById("prepSteps").innerHTML = recipe.steps.map(item => `<li>${escapeHtml(item)}</li>`).join("");
         const photo = document.getElementById("mealPhoto");
         photo.hidden = !recipe.image;
@@ -929,7 +960,7 @@
         }
         const recipe = buildRecipe(activeRecipeMode);
         if (!recipe.ingredients.length) {
-          showWarning(activeRecipeMode, "Todos os ingredientes disponiveis foram bloqueados. Remova um alimento proibido para gerar a receita.");
+          showWarning(activeRecipeMode, "Todos os ingredientes disponíveis foram bloqueados. Remova um alimento proibido para gerar a receita.");
           resetRecipeCard();
           return;
         }

@@ -102,7 +102,7 @@
           <img src="./session-3-sleeping-kitchen.png" alt="Cozinha do Bistro Pet preparando o plano semanal" />
           <div class="frosted-message weekly-empty-message">
             <span>Bistro em preparo</span>
-            <p>O chef está organizando a próxima semana</p>
+            <p>O chef está organizando a próxima semana.</p>
           </div>
 
 	          <div class="weekly-result-card" id="weeklyResultCard" role="region" aria-live="polite" aria-labelledby="weeklyPlanTitle">
@@ -119,7 +119,7 @@
     </main>
 
 	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
-	    <script src="./bistropet-accessibility.js"></script>
+	    <script src="./bistropet-accessibility.js?v=tts-natural-ingredients"></script>
     <script>
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
@@ -132,6 +132,39 @@
       const imagePreparingSrc = "./recipe-weekly-neutral-photo.png";
       const imageEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-recipe-image";
 
+      function profilePortionSize() {
+        const profile = window.BistroPetStorage ? window.BistroPetStorage.getPetProfile() : {};
+        const weightText = String(profile.weight || "").replace(",", ".");
+        const weightMatch = weightText.match(/\d+(?:\.\d+)?/);
+        const weight = weightMatch ? Number(weightMatch[0]) : 0;
+        if (weight > 0 && weight <= 10) return "small";
+        if (weight > 10 && weight <= 25) return "medium";
+        if (weight > 25) return "large";
+        const size = normalize(profile.size || "");
+        if (/\b(pequeno|pequena|small)\b/.test(size)) return "small";
+        if (/\b(grande|large)\b/.test(size)) return "large";
+        return "medium";
+      }
+
+      function displayIngredientWithPortion(ingredient) {
+        const portions = {
+          small: { protein: 80, base: 50, vegetable: 40, grain: 30 },
+          medium: { protein: 120, base: 75, vegetable: 60, grain: 45 },
+          large: { protein: 160, base: 100, vegetable: 80, grain: 60 }
+        };
+        const size = profilePortionSize();
+        const category = ingredientCategory(ingredient);
+        const cleanIngredient = normalize(ingredient);
+        const grams = category === "protein"
+          ? portions[size].protein
+          : /\b(arroz|quinoa|aveia|milho|racao|ração)\b/.test(cleanIngredient)
+            ? portions[size].grain
+            : category === "base"
+              ? portions[size].base
+              : portions[size].vegetable;
+        return `${grams} g de ${ingredient}`;
+      }
+
       function createDayCard(day, title, image, details, open = false) {
         const preparationSteps = String(details && details.prep || "")
           .split(/(?<=[.!?])\s+/)
@@ -141,7 +174,7 @@
           <div class="week-day-details"${open ? "" : " hidden"}>
             <div class="ingredient-list">
               <strong>Ingredientes utilizados</strong>
-              <ul>${details.ingredients.map(ingredient => `<li>${ingredient}</li>`).join("")}</ul>
+              <ul>${details.ingredients.map(ingredient => `<li>${displayIngredientWithPortion(ingredient)}</li>`).join("")}</ul>
             </div>
             <div class="prep-steps">
               <strong>Modo de preparo</strong>
@@ -184,9 +217,9 @@
         ["inhame", "Inhame"],
         ["aveia", "Aveia"],
         ["pepino", "Pepino"],
-        ["racao", "Racao"],
+        ["racao", "Ração"],
         ["arroz", "Arroz"],
-        ["abobora", "Abobora"],
+        ["abobora", "Abóbora"],
         ["peixe", "Peixe"],
         ["batata doce", "Batata doce"],
         ["batata", "Batata"],
