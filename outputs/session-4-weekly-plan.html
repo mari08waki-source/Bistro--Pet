@@ -117,9 +117,8 @@
         </div>
       </section>
     </main>
-
 	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
-	    <script src="./bistropet-accessibility.js?v=tts-natural-ingredients"></script>
+	    <script src="./bistropet-accessibility.js?v=tts-weekly-selected-day"></script>
     <script>
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
@@ -178,7 +177,7 @@
             </div>
             <div class="prep-steps">
               <strong>Modo de preparo</strong>
-              <ol>${preparationSteps.map(step => `<li>${step}</li>`).join("")}</ol>
+              <div>${preparationSteps.map(step => `<p>${step}</p>`).join("")}</div>
             </div>
           </div>
         ` : "";
@@ -231,7 +230,11 @@
         ["abobrinha", "Abobrinha"],
         ["vagem", "Vagem"],
         ["beterraba", "Beterraba"],
+        ["couve manteiga", "Couve manteiga"],
+        ["couve flor", "Couve flor"],
         ["couve", "Couve"],
+        ["acelga", "Acelga"],
+        ["repolho", "Repolho"],
         ["selga", "Selga"],
         ["mandioquinha", "Mandioquinha"]
       ];
@@ -257,7 +260,8 @@
         const found = [];
         const cleanText = normalize(value);
         allowedIngredientTerms.forEach(([term, label]) => {
-          if (cleanText.includes(term) && !found.some(existing => isRestricted(label, [existing]) || isRestricted(existing, [label]))) {
+          const nestedInCompound = found.some(existing => normalize(existing).includes(term));
+          if (cleanText.includes(term) && !nestedInCompound && !found.some(existing => isRestricted(label, [existing]) || isRestricted(existing, [label]))) {
             found.push(label);
           }
         });
@@ -273,6 +277,8 @@
         const clean = normalize(item);
         if (/\b(figado de boi|figado bovino)\b/.test(clean)) return "Fígado de boi";
         if (/\b(figado de galinha|figado de frango)\b/.test(clean)) return "Fígado de galinha";
+        if (clean === "couve manteiga") return "Couve manteiga";
+        if (clean === "couve flor") return "Couve flor";
         return item;
       }
 
@@ -443,7 +449,7 @@
         const cleanIngredient = normalize(ingredient);
         if (weeklyProteinFamily(ingredient) || ["ovos", "ovo", "peru"].some(term => cleanIngredient.includes(term))) return "protein";
         if (["arroz", "racao", "ração", "mandioquinha", "mandioca", "aipim", "macaxeira", "batata doce", "batata", "quinoa", "inhame", "aveia"].some(term => cleanIngredient.includes(term))) return "base";
-        if (["abobrinha", "chuchu", "abobora", "cenoura", "pepino", "vagem", "beterraba", "couve"].some(term => cleanIngredient.includes(term))) return "vegetable";
+        if (["abobrinha", "chuchu", "abobora", "cenoura", "pepino", "vagem", "beterraba", "couve", "acelga", "repolho"].some(term => cleanIngredient.includes(term))) return "vegetable";
         return "";
       }
 
@@ -457,6 +463,25 @@
         return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
       }
 
+      function weeklyArticleForIngredient(item) {
+        if (/\b(ovos)\b/.test(normalize(item))) return "os";
+        return /\b(carne|batata|batata doce|cenoura|mandioca|mandioquinha|abobora|abobrinha|quinoa|aveia|couve|acelga|vagem)\b/.test(normalize(item)) ? "a" : "o";
+      }
+
+      function weeklyNaturalListWithArticle(items) {
+        const names = uniqueIngredients(items).map(item => `${weeklyArticleForIngredient(item)} ${item.toLowerCase()}`);
+        if (names.length < 2) return names[0] || "os ingredientes";
+        return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+      }
+
+      function weeklyAgreement(items, singular, plural) {
+        return uniqueIngredients(items).length > 1 ? plural : singular;
+      }
+
+      function weeklyIsLeaf(ingredient) {
+        return /\b(couve|couve manteiga|acelga|repolho)\b/.test(normalize(ingredient)) && !/\bcouve flor\b/.test(normalize(ingredient));
+      }
+
       function weeklyRecipeTitle(ingredients) {
         const items = uniqueIngredients(ingredients);
         if (!items.length) return "Receita da semana";
@@ -467,9 +492,9 @@
       function generatedWeeklyProteinName(item, offset, restrictions) {
         const family = weeklyProteinFamily(item);
         const options = {
-          carne: "Carne cozida e desfiada",
-          peixe: "Peixe cozido e desfiado",
-          frango: "Frango cozido e desfiado"
+          carne: "Carne",
+          peixe: "Peixe",
+          frango: "Frango"
         };
         if (!family || !options[family]) return simpleWeeklyIngredient(item);
         const label = family === "carne" ? "Carne" : family === "peixe" ? "Peixe" : "Frango";
@@ -506,18 +531,26 @@
         const items = uniqueIngredients(ingredients);
         const meats = items.filter(item => ingredientCategory(item) === "protein");
         const fish = meats.filter(item => normalize(item) === "peixe");
+        const chicken = meats.filter(item => normalize(item) === "frango");
+        const beef = meats.filter(item => normalize(item) === "carne");
         const eggs = meats.filter(item => /\bovo|ovos\b/.test(normalize(item)));
-        const otherMeats = meats.filter(item => !fish.includes(item) && !eggs.includes(item));
+        const otherMeats = meats.filter(item => !fish.includes(item) && !chicken.includes(item) && !beef.includes(item) && !eggs.includes(item));
         const sides = items.filter(item => ingredientCategory(item) !== "protein");
-        const cutSides = sides.filter(item => !weeklyIsGrain(item));
+        const grains = sides.filter(weeklyIsGrain);
+        const leaves = sides.filter(weeklyIsLeaf);
+        const vegetables = sides.filter(item => !weeklyIsGrain(item) && !weeklyIsLeaf(item));
         const steps = ["Separe todos os ingredientes."];
-        if (cutSides.length) steps.push(`Corte ${weeklyNaturalList(cutSides)} em cubinhos pequenos.`);
-        if (otherMeats.length) steps.push(`Corte ${weeklyNaturalList(otherMeats)} em pedaços pequenos e cozinhe até ${weeklyMeatEnding(otherMeats)}.`);
-        if (fish.length) steps.push(`Cozinhe ${weeklyNaturalList(fish)} até ${weeklyMeatEnding(fish)} e retire todas as espinhas.`);
-        if (eggs.length) steps.push(`Cozinhe ${weeklyNaturalList(eggs)}, retire a casca e pique em pedaços pequenos.`);
-        if (sides.length) steps.push(`Cozinhe ${weeklyNaturalList(sides)} com água até ${weeklySideEnding(sides)}.`);
+        if (chicken.length) steps.push(`Corte ${weeklyNaturalListWithArticle(chicken)} em pedaços pequenos. Cozinhe ${weeklyNaturalListWithArticle(chicken)}.`);
+        if (beef.length) steps.push(`Corte ${weeklyNaturalListWithArticle(beef)} em pedaços pequenos. Cozinhe ${weeklyNaturalListWithArticle(beef)} até ${weeklyAgreement(beef, "ficar macia", "ficarem macias")}.`);
+        if (otherMeats.length) steps.push(`Corte ${weeklyNaturalListWithArticle(otherMeats)} em pedaços pequenos. Cozinhe ${weeklyNaturalListWithArticle(otherMeats)} até ${weeklyAgreement(otherMeats, "ficar bem cozido", "ficarem bem cozidos")}.`);
+        if (fish.length) steps.push(`Prepare ${weeklyNaturalListWithArticle(fish)} em pedaços pequenos. Cozinhe ${weeklyNaturalListWithArticle(fish)} até ${weeklyAgreement(fish, "ficar macio", "ficarem macios")}. Retire cuidadosamente todas as espinhas.`);
+        if (eggs.length) steps.push(`Cozinhe ${weeklyNaturalListWithArticle(eggs)}, retire a casca e pique em pedaços pequenos.`);
+        if (leaves.length) steps.push(`Lave ${weeklyNaturalListWithArticle(leaves)} e corte em tiras finas. Refogue ${weeklyNaturalListWithArticle(leaves)} até murchar levemente.`);
+        if (vegetables.length) steps.push(`Lave ${weeklyNaturalListWithArticle(vegetables)} e corte em pedaços pequenos. Cozinhe ${weeklyNaturalListWithArticle(vegetables)} até ${weeklyAgreement(vegetables, "ficar macia", "ficarem macias")}.`);
+        if (grains.length) steps.push(`Cozinhe ${weeklyNaturalListWithArticle(grains)} até ${weeklyAgreement(grains, "ficar macio", "ficarem macios")}.`);
         steps.push(`Misture ${weeklyNaturalList(items)}.`);
-        steps.push("Espere amornar até a temperatura ambiente e sirva.");
+        steps.push("Aguarde amornar.");
+        steps.push("Sirva para o pet.");
         return steps.join(" ");
       }
 
@@ -884,8 +917,8 @@
       document.getElementById("weeklyCustom").addEventListener("change", updateModeState);
 	      createWeekPlanButton.addEventListener("click", generateProfileWeeklyPlan);
 	      document.getElementById("listenWeeklyPlan").addEventListener("click", () => {
-	        if (currentPlan.length && window.BistroPetAccessibility) {
-	          window.BistroPetAccessibility.speakWeeklyPlan(currentPlan);
+	        if (activeDayIndex !== null && currentPlan[activeDayIndex] && window.BistroPetAccessibility) {
+	          window.BistroPetAccessibility.speakWeeklyDay(currentPlan[activeDayIndex]);
 	        }
 	      });
 	      document.getElementById("stopWeeklyAudio").addEventListener("click", () => {

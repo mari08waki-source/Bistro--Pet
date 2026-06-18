@@ -777,7 +777,7 @@ h3 {
 }
 
 .ingredient-list ul,
-.prep-steps ol {
+.prep-steps div {
   display: grid;
   gap: 5px;
   margin: 0;
@@ -805,8 +805,8 @@ h3 {
   box-shadow: 0 0 0 4px rgba(199, 167, 107, 0.12);
 }
 
-.prep-steps ol {
-  padding-left: 19px;
+.prep-steps p {
+  margin: 0;
 }
 
 .prepared-content .primary {
@@ -1318,7 +1318,7 @@ h3 {
   font-size: 24px;
 }
 
-.live-recipe-card .prep-steps ol,
+.live-recipe-card .prep-steps div,
 .live-recipe-card .ingredient-list ul {
   font-size: 12px;
 }

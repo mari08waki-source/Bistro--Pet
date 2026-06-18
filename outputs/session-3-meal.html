@@ -226,17 +226,16 @@
             </div>
             <div class="prep-steps">
               <strong>Modo de preparo</strong>
-              <ol id="prepSteps">
-                <li>Cozinhe separadamente até ficar macio.</li>
-                <li>Misture em textura delicada.</li>
-                <li>Sirva morno.</li>
-              </ol>
+              <div id="prepSteps">
+                <p>Cozinhe separadamente até ficar macio.</p>
+                <p>Misture em textura delicada.</p>
+                <p>Sirva morno.</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
     </main>
-
     <div class="recipe-history-panel" id="recipeHistoryPanel" hidden>
       <section class="recipe-history-book" role="dialog" aria-modal="true" aria-labelledby="recipeHistoryTitle">
         <div class="history-panel-header">
@@ -359,6 +358,8 @@
       function splitPersonalizedList(value) {
         const protectedItems = [
           ["batata doce", "batata-doce"],
+          ["couve manteiga", "couve-manteiga"],
+          ["couve flor", "couve-flor"],
           ["fígado de boi", "fígado-de-boi"],
           ["figado de boi", "figado-de-boi"],
           ["fígado de galinha", "fígado-de-galinha"],
@@ -530,7 +531,7 @@
           </div>
           <div class="prep-steps">
             <strong>Modo de preparo</strong>
-            <ol>${(recipe.steps || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol>
+            <div>${(recipe.steps || []).map(item => `<p>${escapeHtml(item)}</p>`).join("")}</div>
           </div>
         `;
 	        document.getElementById("backToRecipeHistory").addEventListener("click", showHistoryList);
@@ -699,6 +700,10 @@
         return /\b(pepino|folha|folhas|alface|rucula|rúcula)\b/.test(normalize(item));
       }
 
+      function isLeafIngredient(item) {
+        return /\b(couve|couve manteiga|acelga|repolho)\b/.test(normalize(item)) && !/\bcouve flor\b/.test(normalize(item));
+      }
+
       function isGrainIngredient(item) {
         return /\b(arroz|quinoa|aveia|milho)\b/.test(normalize(item));
       }
@@ -740,6 +745,21 @@
         return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
       }
 
+      function articleForIngredient(item) {
+        if (/\b(ovos)\b/.test(normalize(item))) return "os";
+        return /\b(carne|batata|batata doce|cenoura|mandioca|mandioquinha|abobora|abobrinha|quinoa|aveia|couve|acelga|vagem)\b/.test(normalize(item)) ? "a" : "o";
+      }
+
+      function naturalListWithArticle(items) {
+        const names = uniqueItems(items).map(item => `${articleForIngredient(item)} ${item.toLowerCase()}`);
+        if (names.length < 2) return names[0] || "os ingredientes";
+        return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+      }
+
+      function agreement(items, singular, plural) {
+        return uniqueItems(items).length > 1 ? plural : singular;
+      }
+
       function simpleRecipeTitle(ingredients) {
         const items = uniqueItems(ingredients);
         if (!items.length) return "Receita caseira";
@@ -770,32 +790,56 @@
         const eggs = meats.filter(item => /\bovo|ovos\b/.test(normalize(item)));
         const nonEggMeats = meats.filter(item => !eggs.some(egg => sameIngredient(egg, item)));
         const fish = nonEggMeats.filter(item => normalize(item) === "peixe");
-        const otherMeats = nonEggMeats.filter(item => !fish.some(fishItem => sameIngredient(fishItem, item)));
+        const chicken = nonEggMeats.filter(item => normalize(item) === "frango");
+        const beef = nonEggMeats.filter(item => normalize(item) === "carne");
+        const otherMeats = nonEggMeats.filter(item =>
+          !fish.some(fishItem => sameIngredient(fishItem, item))
+          && !chicken.some(chickenItem => sameIngredient(chickenItem, item))
+          && !beef.some(beefItem => sameIngredient(beefItem, item))
+        );
         const fresh = items.filter(isFreshIngredient);
         const cooked = items.filter(item => !isProteinIngredient(item) && !isFreshIngredient(item));
-        const cutItems = cooked.filter(item => !isGrainIngredient(item));
+        const grains = cooked.filter(isGrainIngredient);
+        const leaves = cooked.filter(isLeafIngredient);
+        const vegetables = cooked.filter(item => !isGrainIngredient(item) && !isLeafIngredient(item));
         const steps = ["Separe todos os ingredientes."];
 
-        if (cutItems.length) {
-          steps.push(`Corte ${naturalList(cutItems)} em cubinhos pequenos.`);
+        if (chicken.length) {
+          steps.push(`Corte ${naturalListWithArticle(chicken)} em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalListWithArticle(chicken)}.`);
+        }
+        if (beef.length) {
+          steps.push(`Corte ${naturalListWithArticle(beef)} em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalListWithArticle(beef)} até ${agreement(beef, "ficar macia", "ficarem macias")}.`);
         }
         if (otherMeats.length) {
-          steps.push(`Cozinhe ${naturalList(otherMeats)} até ${cookedMeatEnding(otherMeats)}. Depois, desfie ou corte em pedaços pequenos.`);
+          steps.push(`Corte ${naturalListWithArticle(otherMeats)} em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalListWithArticle(otherMeats)} até ${agreement(otherMeats, "ficar bem cozido", "ficarem bem cozidos")}.`);
         }
         if (fish.length) {
-          steps.push(`Cozinhe ${naturalList(fish)} por aproximadamente 10 a 15 minutos. Retire cuidadosamente todas as espinhas e corte em pedaços pequenos.`);
+          steps.push(`Prepare ${naturalListWithArticle(fish)} em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalListWithArticle(fish)} até ${agreement(fish, "ficar macio", "ficarem macios")}. Retire cuidadosamente todas as espinhas.`);
         }
         if (eggs.length) {
-          steps.push(`Cozinhe ${naturalList(eggs)}, retire a casca e pique em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalListWithArticle(eggs)}, retire a casca e pique em pedaços pequenos.`);
         }
-        if (cooked.length) {
-          steps.push(`Cozinhe ${naturalList(cooked)} com água até ${cookedIngredientEnding(cooked)}.`);
+        if (leaves.length) {
+          steps.push(`Lave ${naturalListWithArticle(leaves)} e corte em tiras finas.`);
+          steps.push(`Refogue ${naturalListWithArticle(leaves)} até murchar levemente.`);
+        }
+        if (vegetables.length) {
+          steps.push(`Lave ${naturalListWithArticle(vegetables)} e corte em pedaços pequenos.`);
+          steps.push(`Cozinhe ${naturalListWithArticle(vegetables)} até ${agreement(vegetables, "ficar macia", "ficarem macias")}.`);
+        }
+        if (grains.length) {
+          steps.push(`Cozinhe ${naturalListWithArticle(grains)} até ${agreement(grains, "ficar macio", "ficarem macios")}.`);
         }
         if (fresh.length) {
-          steps.push(`Lave bem ${naturalList(fresh)} e corte em pedaços pequenos.`);
+          steps.push(`Lave bem ${naturalListWithArticle(fresh)} e corte em pedaços pequenos.`);
         }
         steps.push(`Misture ${naturalList(items)}.`);
-        steps.push(meats.length || cooked.length ? "Espere amornar até a temperatura ambiente e sirva." : "Sirva em temperatura ambiente.");
+        steps.push("Aguarde amornar.");
+        steps.push("Sirva para o pet.");
         return steps;
       }
 
@@ -809,6 +853,8 @@
         const text = normalize(simple);
         if (/\b(figado de boi|figado bovino)\b/.test(text)) return "Fígado de boi";
         if (/\b(figado de galinha|figado de frango)\b/.test(text)) return "Fígado de galinha";
+        if (text === "couve manteiga") return "Couve manteiga";
+        if (text === "couve flor") return "Couve flor";
         return simple;
       }
 
@@ -900,7 +946,7 @@
         description.textContent = recipe.description;
         description.hidden = !recipe.description;
         document.getElementById("resultIngredients").innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(displayIngredientWithPortion(item))}</li>`).join("");
-        document.getElementById("prepSteps").innerHTML = recipe.steps.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+        document.getElementById("prepSteps").innerHTML = recipe.steps.map(item => `<p>${escapeHtml(item)}</p>`).join("");
         const photo = document.getElementById("mealPhoto");
         photo.hidden = !recipe.image;
         if (recipe.image) photo.src = recipe.image;

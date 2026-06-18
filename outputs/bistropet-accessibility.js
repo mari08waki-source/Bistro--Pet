@@ -71,6 +71,17 @@
     return spokenSteps.length ? `Modo de preparo. ${spokenSteps.join(" ")}` : "";
   }
 
+  function weekdayText(day) {
+    const cleanDay = cleanText(day);
+    return {
+      "Segunda": "Segunda-feira",
+      "Terça": "Terça-feira",
+      "Quarta": "Quarta-feira",
+      "Quinta": "Quinta-feira",
+      "Sexta": "Sexta-feira"
+    }[cleanDay] || cleanDay;
+  }
+
   function updateAudioControls() {
     document.querySelectorAll("[data-audio-listen]").forEach(button => {
       button.setAttribute("aria-pressed", reading ? "true" : "false");
@@ -175,6 +186,17 @@
     ].join(" ");
   }
 
+  function weeklyDayText(dayPlan) {
+    if (!dayPlan) return "";
+    const ingredients = Array.isArray(dayPlan.ingredients) ? ingredientsText(dayPlan.ingredients) : "";
+    return [
+      `${weekdayText(dayPlan.day)}.`,
+      `Receita: ${cleanText(dayPlan.title)}.`,
+      ingredients,
+      dayPlan.prep ? preparationText([dayPlan.prep]) : ""
+    ].filter(Boolean).join(" ");
+  }
+
   function enhanceElement(element) {
     if (!element || typeof element.querySelectorAll !== "function") return;
 
@@ -217,6 +239,9 @@
     },
     speakWeeklyPlan(plan) {
       return speak(weeklyPlanText(plan));
+    },
+    speakWeeklyDay(dayPlan) {
+      return speak(weeklyDayText(dayPlan));
     },
     stop
   };
