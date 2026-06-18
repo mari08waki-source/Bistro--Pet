@@ -25,39 +25,8 @@
       #weeklyPlanner .selected-day-recipe { margin-top: 12px; }
       #weeklyPlanner .selected-day-recipe .week-day-card { grid-template-columns: 68px 1fr; }
       #weeklyPlanner .selected-day-recipe .week-day-card img { width: 68px; height: 58px; }
-      #weeklyPlanner .custom-plan-copy { display: none; margin: 6px 0 4px; color: #8c7040; font-size: 12px; line-height: 1.2; }
-      #weeklyPlanner .custom-plan-copy strong { display: block; color: #a27a35; font-size: 13px; margin-bottom: 0; letter-spacing: .04em; }
-      #weeklyPlanner.is-custom-mode .weekly-ingredients > span,
-      #weeklyPlanner.is-custom-mode .weekly-ingredients > small,
-      #weeklyPlanner.is-custom-mode #weeklyChips { display: none; }
       #weeklyPlanner.is-custom-mode .weekly-controls { background: linear-gradient(180deg, rgba(255, 248, 232, 0.96), rgba(244, 224, 184, 0.82)); border-color: rgba(196, 145, 53, 0.26); }
       #weeklyPlanner.is-custom-mode .kitchen-switch[for="weeklyCustom"] { background: rgba(234, 216, 180, 0.82); color: #76551f; }
-      #weeklyPlanner .weekly-ingredients { max-height: none; opacity: 1; overflow: visible; transform: none; }
-      #weeklyPlanner.is-custom-mode .weekly-ingredients { display: grid; gap: 6px; }
-      #weeklyPlanner #weeklyCustom:checked ~ .weekly-ingredients { max-height: none; overflow: visible; }
-      #weeklyPlanner:not(.is-custom-mode) .weekly-ingredients > span,
-      #weeklyPlanner:not(.is-custom-mode) .weekly-ingredients > small,
-      #weeklyPlanner:not(.is-custom-mode) #weeklyChips { display: none; }
-      #weeklyPlanner .custom-special-card { display: none; gap: 5px; padding: 6px; border: 1px solid rgba(120, 148, 96, 0.22); border-radius: 12px; background: rgba(238, 247, 229, 0.72); }
-      #weeklyPlanner.is-custom-mode .custom-plan-copy,
-      #weeklyPlanner.is-custom-mode .custom-special-card,
-      #weeklyPlanner.is-custom-mode .custom-ingredient-row,
-      #weeklyPlanner.is-custom-mode .custom-blocked-card { display: grid; }
-      #weeklyPlanner.is-custom-mode .custom-plan-copy { color: #617753; margin: 0; }
-      #weeklyPlanner.is-custom-mode .custom-plan-copy strong { color: #5f744d; font-size: 12px; }
-      #weeklyPlanner .custom-ingredient-row { display: none; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; margin-top: 3px; padding: 3px; border: 1px solid rgba(120, 148, 96, 0.28); border-radius: 999px; background: rgba(238, 247, 229, 0.78); box-shadow: 0 8px 18px rgba(94, 122, 73, 0.08); }
-      #weeklyPlanner .custom-ingredient-row input { min-width: 0; border: 0; border-radius: 999px; background: transparent; padding: 6px 9px; color: var(--ink); outline: 0; font-size: 12px; }
-      #weeklyPlanner .custom-ingredient-row button { border: 0; border-radius: 999px; background: #d8e6c8; color: #52683f; padding: 6px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-      #weeklyPlanner .custom-chip-list { display: none; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-      #weeklyPlanner.is-custom-mode .custom-chip-list { display: flex; }
-      #weeklyPlanner .custom-ingredient-message { min-height: 0; margin-top: 0; color: #8c7040; font-size: 11px; line-height: 1.2; }
-      #weeklyPlanner .custom-chip-list .ingredient-chip { padding: 6px 9px; font-size: 11px; }
-      #weeklyPlanner .custom-chip-list .ingredient-chip button { margin-left: 5px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-      #weeklyPlanner .custom-blocked-card { display: grid; gap: 5px; margin-top: 6px; padding: 6px; border: 1px solid rgba(177, 91, 82, 0.22); border-radius: 12px; background: rgba(255, 238, 232, 0.72); }
-      #weeklyPlanner .custom-blocked-title { color: #9a5147; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
-      #weeklyPlanner .custom-blocked-card .custom-ingredient-row { display: grid; margin-top: 0; border-color: rgba(177, 91, 82, 0.24); background: rgba(255, 250, 247, 0.82); box-shadow: none; }
-      #weeklyPlanner .custom-blocked-card .custom-ingredient-row button { background: #efd1c9; color: #8b473e; }
-	      #weeklyPlanner .custom-blocked-card .custom-chip-list { display: flex; }
 	      #weeklyPlanner .weekly-audio-actions { margin-top: 10px; }
 	      #weeklyPlanner:not(.is-generated) .weekly-audio-actions { display: none; }
 	      #weeklyPlanner .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
@@ -316,19 +285,6 @@
         ]);
       }
 
-      function profileBlockedIngredients() {
-        const profile = window.BistroPetStorage && window.BistroPetStorage.getPetProfile
-          ? window.BistroPetStorage.getPetProfile()
-          : {};
-        return restrictionTerms(profile);
-      }
-
-      function saveProfileBlockedIngredients(items) {
-        try {
-          window.localStorage.removeItem("bistropet:global-blocked-ingredients");
-        } catch (error) {}
-      }
-
       function isRestricted(ingredient, restrictions) {
         const cleanIngredient = weeklyPreparedIngredientName(ingredient);
         return restrictions.some(item => {
@@ -353,89 +309,6 @@
           const cleanItem = normalize(item);
           return list.findIndex(candidate => normalize(candidate) === cleanItem) === itemIndex;
         });
-      }
-
-      function selectedIngredients() {
-        return [];
-      }
-
-      function renderCustomChips() {
-        customChipList.innerHTML = customIngredients.map(item => `
-          <button class="ingredient-chip active" type="button" data-custom-ingredient="${item}">${item}</button>
-        `).join("");
-        customChipList.querySelectorAll("[data-custom-ingredient]").forEach(chip => {
-          chip.addEventListener("click", () => {
-            const index = customIngredients.findIndex(item => normalize(item) === normalize(chip.dataset.customIngredient));
-            if (index >= 0) customIngredients.splice(index, 1);
-            renderCustomChips();
-            clearWeeklyPlanState();
-          });
-        });
-      }
-
-      function renderCustomBlockedChips() {
-        customBlockedChipList.innerHTML = customBlockedIngredients.map(item => `
-          <span class="ingredient-chip active">${item}<button type="button" aria-label="Remover ${item}" data-custom-blocked="${normalize(item)}">×</button></span>
-        `).join("");
-        customBlockedChipList.querySelectorAll("[data-custom-blocked]").forEach(chip => {
-          chip.addEventListener("click", () => {
-            const index = customBlockedIngredients.findIndex(item => normalize(item) === normalize(chip.dataset.customBlocked));
-            if (index >= 0) customBlockedIngredients.splice(index, 1);
-            renderCustomBlockedChips();
-            clearWeeklyPlanState();
-          });
-        });
-      }
-
-      function addCustomBlockedIngredient() {
-        const ingredients = cleanCustomIngredientList(customBlockedInput.value);
-        customBlockedMessage.textContent = "";
-        if (!ingredients.length) return;
-        const customBlocked = ingredients.find(ingredient => isRestricted(ingredient, customBlockedIngredients));
-        if (customBlocked) {
-          customIngredientMessage.textContent = "Esse ingrediente já está nos proibidos.";
-          return;
-        }
-        ingredients.forEach(ingredient => {
-          const selectedIndex = customIngredients.findIndex(item => normalize(item) === normalize(ingredient));
-          if (selectedIndex >= 0) customIngredients.splice(selectedIndex, 1);
-          if (!customBlockedIngredients.some(item => normalize(item) === normalize(ingredient))) {
-            customBlockedIngredients.push(ingredient);
-          }
-        });
-        renderCustomChips();
-        renderCustomBlockedChips();
-        customBlockedInput.value = "";
-        clearWeeklyPlanState();
-      }
-
-      function addCustomIngredient() {
-        const restrictions = activeWeeklyRestrictions(window.BistroPetStorage.getPetProfile());
-        const ingredients = cleanCustomIngredientList(customIngredientInput.value);
-        customIngredientMessage.textContent = "";
-        if (!ingredients.length) return;
-        const blocked = ingredients.find(ingredient => isRestricted(ingredient, restrictions));
-        if (blocked) {
-          customIngredientMessage.textContent = "Esse ingrediente está nos proibidos.";
-          return;
-        }
-        ingredients.forEach(ingredient => {
-          if (isRestricted(ingredient, customBlockedIngredients)) return;
-          if (!customIngredients.some(item => normalize(item) === normalize(ingredient))) {
-            customIngredients.push(ingredient);
-          }
-        });
-        renderCustomChips();
-        customIngredientInput.value = "";
-        clearWeeklyPlanState();
-        return;
-        if (customIngredients.some(item => normalize(item) === normalize(ingredient))) {
-          customIngredientMessage.textContent = `${ingredient} já está na seleção personalizada.`;
-          return;
-        }
-        customIngredients.push(ingredient);
-        renderCustomChips();
-        customIngredientInput.value = "";
       }
 
       function activeWeeklyRestrictions(profile) {
@@ -628,18 +501,6 @@
           .join("|");
       }
 
-      function customAllowedPool(preferred, restrictions) {
-        const pool = uniqueIngredients(preferred).filter(item => !isRestricted(item, restrictions));
-        ["protein", "base", "vegetable"].forEach((category, index) => {
-          if (!hasCategory(pool, category)) addFirstSafe(pool, category, restrictions, index);
-        });
-        const safeComplements = [...weeklyCatalog.protein, ...weeklyCatalog.base, ...weeklyCatalog.vegetable]
-          .filter(item => !isRestricted(item, restrictions))
-          .filter(item => !pool.some(existing => normalize(existing) === normalize(item)));
-        while (safeComplements.length) pool.push(safeComplements.shift());
-        return pool;
-      }
-
       function customWeeklyIngredients({ pool, activeRestrictions, dayIndex, usedCombinations }) {
         const preferred = uniqueIngredients(pool).filter(item => !isRestricted(item, activeRestrictions));
         const proteins = uniqueProteinFamilies(safeCatalog("protein", activeRestrictions, 0));
@@ -718,10 +579,17 @@
 	        card.setAttribute("aria-expanded", String(shouldOpen));
       }
 
+      function weeklyModeValue() {
+        return document.getElementById("weeklyCustom").checked ? "custom" : "auto";
+      }
+
+      function weeklyModeLabel(mode) {
+        return mode === "custom" ? "Personalizado" : "Automático";
+      }
+
       function weeklySourceIngredients(profile, customMode) {
         return uniqueIngredients([
-          ...customIngredients,
-          ...extractIngredientTerms(profile.preferences)
+          ...customIngredients
         ]);
       }
 
@@ -751,6 +619,8 @@
           const prep = weeklyPrep(ingredients);
           return {
             day,
+            planMode: customMode ? "custom" : "auto",
+            planModeLabel: customMode ? "Personalizado" : "Automático",
             title,
             ingredients,
             prep,
@@ -823,22 +693,26 @@
       }
 
       function renderProfileWeeklyPlan(plan) {
-        currentPlan = plan;
+        const planMode = weeklyModeValue();
+        currentPlan = plan.map(item => Object.assign({
+          planMode,
+          planModeLabel: weeklyModeLabel(planMode)
+        }, item));
         weeklyDays.innerHTML = `
           <div class="day-tabs" aria-label="Dias da semana">
-            ${plan.map((item, index) => `
+            ${currentPlan.map((item, index) => `
 	              <button class="day-tab${activeDayIndex === index ? " active" : ""}" type="button" data-day-index="${index}" aria-pressed="${activeDayIndex === index ? "true" : "false"}" aria-label="${item.day}: ${item.title}">
                 ${shortDayName(item.day)}
               </button>
             `).join("")}
           </div>
           <div class="selected-day-recipe">
-            ${activeDayIndex === null ? "" : `<div data-selected-day="${plan[activeDayIndex].day}">
+            ${activeDayIndex === null ? "" : `<div data-selected-day="${currentPlan[activeDayIndex].day}">
               ${createDayCard(
-                plan[activeDayIndex].day,
-                plan[activeDayIndex].title,
-                plan[activeDayIndex].image,
-                plan[activeDayIndex],
+                currentPlan[activeDayIndex].day,
+                currentPlan[activeDayIndex].title,
+                currentPlan[activeDayIndex].image,
+                currentPlan[activeDayIndex],
                 true
               )}
             </div>`}
@@ -894,14 +768,6 @@
 
       function generateProfileWeeklyPlan() {
         const profile = window.BistroPetStorage.getPetProfile();
-        const customMode = document.getElementById("weeklyCustom").checked;
-        const source = weeklySourceIngredients(profile, customMode).filter(item => !isRestricted(item, activeWeeklyRestrictions(profile)));
-        if (false) {
-          customIngredientMessage.textContent = customMode
-            ? "Adicione pelo menos um ingrediente para criar o plano personalizado."
-            : "Crie uma receita ou informe preferências no perfil antes de gerar o plano semanal.";
-          return;
-        }
         clearWeeklyPlanState();
         const plan = buildWeeklyPlan(profile);
         activeDayIndex = null;
@@ -927,5 +793,3 @@
     </script>
   </body>
 </html>
-
-

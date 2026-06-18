@@ -48,9 +48,9 @@ test("simultaneous requests with the same lock key are rejected", async () => {
   const pending = new Promise(resolve => {
     release = resolve;
   });
-  const first = withImageRequestLock("client:freeRecipe", async () => pending);
+  const first = withImageRequestLock("client:customRecipe", async () => pending);
   await assert.rejects(
-    withImageRequestLock("client:freeRecipe", async () => "unexpected"),
+    withImageRequestLock("client:customRecipe", async () => "unexpected"),
     error => error.code === "IMAGE_REQUEST_IN_PROGRESS"
   );
   release("done");
@@ -62,7 +62,7 @@ test("distributed protection is mandatory outside memory-only tests", async () =
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   await assert.rejects(
-    withImageRequestLock("client:freeRecipe", async () => "unexpected"),
+    withImageRequestLock("client:customRecipe", async () => "unexpected"),
     /Atomic image guard storage is not configured/
   );
 });
@@ -177,7 +177,7 @@ test("handler applies one daily request per individual generation type", async (
   process.env.IMAGE_LOCK_STORAGE = "memory";
 
   const first = await callHandler({
-    generationType: "freeRecipe",
+    generationType: "customRecipe",
     recipe: { id: "free", recipeName: "Teste", ingredients: ["Arroz"] }
   });
   const cookie = first.headers.get("set-cookie").split(";")[0];
@@ -185,7 +185,7 @@ test("handler applies one daily request per individual generation type", async (
   assert.equal(first.body.limit.remaining, 0);
 
   const second = await callHandler({
-    generationType: "freeRecipe",
+    generationType: "customRecipe",
     cookie,
     clientId: "a-different-manipulated-id",
     recipe: { id: "free", recipeName: "Outro", ingredients: ["Batata"] }
@@ -194,7 +194,7 @@ test("handler applies one daily request per individual generation type", async (
   assert.equal(second.body.status, "limit_exceeded");
 });
 
-test("daily limits are independent for free, custom and chef requests", async () => {
+test("daily limits are independent for custom and chef requests", async () => {
   process.env.IMAGE_CLIENT_SECRET = "independent-test-secret-with-at-least-thirty-two-characters";
   process.env.IMAGE_GENERATION_MODE = "validate";
   process.env.IMAGE_LIMIT_STORAGE = "memory";
@@ -202,7 +202,7 @@ test("daily limits are independent for free, custom and chef requests", async ()
   process.env.IMAGE_LOCK_STORAGE = "memory";
 
   let cookie = "";
-  for (const generationType of ["freeRecipe", "customRecipe", "chefSuggestion"]) {
+  for (const generationType of ["customRecipe", "chefSuggestion"]) {
     const first = await callHandler({
       generationType,
       cookie,
@@ -241,7 +241,7 @@ test("disabled endpoint refuses requests before using paid services", async () =
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   const response = await callHandler({
-    generationType: "freeRecipe",
+    generationType: "customRecipe",
     recipe: { id: "disabled", ingredients: ["Arroz"] }
   });
   assert.equal(response.statusCode, 503);

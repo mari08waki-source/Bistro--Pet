@@ -154,7 +154,7 @@
 
         <div class="recipe-modes" aria-label="Modo de receita">
           <button class="mode-pill active" type="button" data-mode="personalizada">Personalizada</button>
-          <button class="mode-pill" type="button" data-mode="chef">Sugestão do chef</button>
+          <button class="mode-pill" type="button" data-mode="chef">Sugestão do Chefe</button>
         </div>
       </section>
 
@@ -258,9 +258,9 @@
           note: "Receita adaptada aos ingredientes especiais e às restrições informadas."
         },
         chef: {
-          title: "Sugestão do chef",
+          title: "Sugestão do Chefe",
           help: "Receba uma sugestão simples, respeitando os alimentos proibidos adicionados.",
-          names: ["Sugestão do chef", "Receita simples", "Prato caseiro", "Bowl do dia"],
+          names: ["Sugestão do Chefe", "Receita simples", "Prato caseiro", "Bowl do dia"],
           note: "Sugestão simples com ingredientes permitidos."
         }
       };
@@ -488,7 +488,7 @@
       function recipeTypeLabel(mode) {
         return {
           personalizada: "Personalizada",
-          chef: "Sugestão do Chef"
+          chef: "Sugestão do Chefe"
         }[mode] || "";
       }
 
@@ -986,7 +986,7 @@
         });
         document.getElementById("modePanelTitle").textContent = modeCopy[mode].title;
         document.getElementById("modePanelCopy").textContent = modeCopy[mode].help;
-        document.getElementById("createRecipe").textContent = mode === "chef" ? "Gerar sugestão do chef" : "Criar receita";
+        document.getElementById("createRecipe").textContent = mode === "chef" ? "Gerar sugestão do Chefe" : "Criar receita";
         clearWarnings();
         resetRecipeCard();
       }

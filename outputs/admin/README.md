@@ -21,8 +21,8 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 - Verifica a integridade das cinco chaves locais utilizadas pelo painel.
 - Diagnostica o estado das Seções 2, 3 e 4.
 - Exibe os últimos eventos já existentes sem criar histórico novo.
-- Exibe Perfil do Pet.
-- Separa Receita Livre, Personalizada e Sugestão do Chef pelo campo `mode`.
+- Exibe Perfil do Pet com Nome do Pet, Nome do Tutor, Idade, Peso, Porte, Perfil Personalizado e Observação.
+- Separa Receita Personalizada e Sugestão do Chefe pelo campo `mode`, conforme o fluxo atual do aplicativo.
 - Exibe Histórico salvo manualmente.
 - Exibe Plano Semanal.
 - Exibe configurações locais disponíveis.
@@ -37,6 +37,34 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 - `bistropet:weekly-plan`
 - `bistropet:image-client-id`
 
+## Estrutura atual esperada
+
+### Perfil do Pet
+
+- `name`: Nome do Pet.
+- `tutor`: Nome do Tutor.
+- `age`: Idade.
+- `weight`: Peso.
+- `size`: Porte.
+- `menuStyle`: `livre` quando Perfil Personalizado está desligado, `personalizada` quando está ligado.
+- `notes`: Observação preenchida apenas quando Perfil Personalizado está ligado.
+
+### Receitas
+
+- `mode: "personalizada"`: Receita Personalizada.
+- `mode: "chef"`: Sugestão do Chefe.
+
+### Plano Semanal
+
+- Fluxos visuais atuais: Automático e Personalizado.
+- Persistência local atual: array com 7 itens em `bistropet:weekly-plan`.
+- Cada item do plano contém `day`, `planMode`, `planModeLabel`, `title`, `ingredients`, `prep`, `note`, `image` e dados resumidos do perfil.
+
+### Histórico
+
+- `bistropet:manual-recipe-history` armazena receitas salvas manualmente.
+- Cada receita salva contém nome da receita (`title`), tipo (`mode`), data (`createdAt`) e modo de preparo (`steps`).
+
 ## Limitações preservadas
 
 - Não possui autenticação real.
@@ -46,4 +74,4 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 - Não coleta logs ou erros.
 - Não altera, remove ou migra chaves existentes do `localStorage`.
 - Não modifica arquivos ou comportamentos da área do usuário.
-- O botão `Atualizar Diagnóstico` apenas recarrega as leituras atuais.
+- O botão `Atualizar leitura` apenas recarrega as leituras atuais.

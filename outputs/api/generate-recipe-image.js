@@ -5,7 +5,7 @@ import { simpleIngredientCombination } from "./_ingredient-combination.js";
 import { identifyImageClient } from "./_image-client.js";
 import { withImageRequestLock } from "./_image-request-lock.js";
 
-const validGenerationTypes = new Set(["freeRecipe", "customRecipe", "chefSuggestion", "weeklyPlan"]);
+const validGenerationTypes = new Set(["customRecipe", "chefSuggestion", "weeklyPlan"]);
 
 function sendJson(res, response, status = 200) {
   res.setHeader("Content-Type", "application/json");
@@ -36,7 +36,7 @@ export default async function handler(request, response) {
 
   try {
     const body = readBody(request);
-    const generationType = body.generationType || "freeRecipe";
+    const generationType = body.generationType;
     if (!validGenerationTypes.has(generationType)) {
       return sendJson(response, { error: "Invalid image generation type." }, 400);
     }

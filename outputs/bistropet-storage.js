@@ -12,8 +12,6 @@
     age: "",
     weight: "",
     menuStyle: "livre",
-    preferences: "",
-    restrictions: "",
     notes: "",
     schemaVersion: PROFILE_SCHEMA_VERSION,
     revision: 0,
@@ -35,7 +33,6 @@
 
   function clearRecipeSessionState() {
     [
-      "bistropet:session3:free",
       "bistropet:session3:special",
       "bistropet:session3:blocked",
       "bistropet:session3:index"
@@ -120,23 +117,28 @@
   }
 
   function canonicalProfile(value) {
-    const profile = Object.assign({}, defaultProfile, value || {});
+    const source = Object.assign({}, defaultProfile, value || {});
+    const profile = {
+      name: String(source.name || ""),
+      tutor: String(source.tutor || ""),
+      size: String(source.size || ""),
+      age: String(source.age || ""),
+      weight: String(source.weight || ""),
+      menuStyle: source.menuStyle === "personalizada" ? "personalizada" : "livre",
+      notes: String(source.notes || ""),
+      schemaVersion: PROFILE_SCHEMA_VERSION,
+      revision: Number(source.revision || 0),
+      updatedAt: String(source.updatedAt || "")
+    };
     profile.notes = profile.menuStyle === "personalizada" ? normalizeObservationText(profile.notes).trim() : "";
-    profile.restrictions = extractFoodRestrictions(profile.notes).join(", ");
-    profile.schemaVersion = PROFILE_SCHEMA_VERSION;
-    profile.revision = Number(profile.revision || 0);
-    profile.updatedAt = String(profile.updatedAt || "");
-    delete profile.noteRestrictions;
     return profile;
   }
 
   function getPetProfile() {
     const storedProfile = readJson(PROFILE_KEY, {});
     const profile = canonicalProfile(storedProfile);
-    const needsMigration = storedProfile.schemaVersion !== PROFILE_SCHEMA_VERSION
-      || storedProfile.restrictions !== profile.restrictions
-      || Object.prototype.hasOwnProperty.call(storedProfile, "noteRestrictions");
-    if (needsMigration) {
+    const schemaNeedsMigration = storedProfile.schemaVersion !== PROFILE_SCHEMA_VERSION;
+    if (schemaNeedsMigration) {
       profile.revision += 1;
       profile.updatedAt = new Date().toISOString();
       writeJson(PROFILE_KEY, profile);

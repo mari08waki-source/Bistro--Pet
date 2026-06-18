@@ -163,9 +163,8 @@
       }
 
       function safeIngredients(profile) {
-        const restrictions = splitList(profile.restrictions);
-        const preferred = splitList(profile.preferences);
-        const source = [...preferred, ...ingredients];
+        const restrictions = window.BistroPetStorage.getOfficialRestrictions();
+        const source = [...ingredients];
         return source.filter((item, index, list) => {
           const cleanItem = normalize(item);
           const blocked = restrictions.some(restriction => cleanItem.includes(normalize(restriction)));
@@ -186,7 +185,7 @@
             "Misturar em textura delicada.",
             "Servir morno e observar a aceitação."
           ],
-          observation: `Restrições respeitadas: ${profile.restrictions || "nenhuma informada"}.`,
+          observation: `Observações respeitadas: ${profile.notes || "nenhuma informada"}.`,
           image: "./session-3-meal-hero.png"
         };
         window.BistroPetStorage.saveLastRecipe(recipe);
@@ -198,6 +197,8 @@
         const safe = safeIngredients(profile);
         const plan = days.map((day, index) => ({
           day,
+          planMode: "auto",
+          planModeLabel: "Automático",
           title: `QA ${day}: ${(safe[index % safe.length] || "arroz").toLowerCase()} com ${(safe[(index + 2) % safe.length] || "abóbora").toLowerCase()}`,
           image: index % 2 === 0 ? "./session-3-meal-hero.png" : "./session-3-meal-alt.png",
           profile: {
@@ -205,8 +206,7 @@
             size: profile.size,
             age: profile.age,
             weight: profile.weight,
-            notes: profile.notes,
-            restrictions: profile.restrictions
+            notes: profile.notes
           }
         }));
         window.BistroPetStorage.saveWeeklyPlan(plan);
