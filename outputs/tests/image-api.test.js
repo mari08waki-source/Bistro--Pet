@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { identifyImageClient } from "./_image-client.js";
-import { withImageRequestLock } from "./_image-request-lock.js";
-import { generateOpenAIRecipeImage } from "./_openai-image.js";
-import handler from "./generate-recipe-image.js";
-import { checkImageLimit } from "./_image-limits.js";
+import { identifyImageClient } from "../api/_image-client.js";
+import { withImageRequestLock } from "../api/_image-request-lock.js";
+import { generateOpenAIRecipeImage } from "../api/_openai-image.js";
+import handler from "../api/generate-recipe-image.js";
+import { checkImageLimit } from "../api/_image-limits.js";
 
 function responseStub() {
   const headers = new Map();
