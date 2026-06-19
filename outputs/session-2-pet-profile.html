@@ -162,7 +162,7 @@
           size: String(data.get("size") || "").trim(),
           age: String(data.get("age") || "").trim(),
           weight: String(data.get("weight") || "").trim(),
-          menuStyle: customProfile.checked ? "personalizada" : "livre",
+          menuStyle: customProfile.checked ? "personalizada" : "padrao",
           notes: customProfile.checked ? normalizeObservationSeparators(data.get("notes")).trim() : ""
         };
       }

@@ -46,7 +46,7 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 - `age`: Idade.
 - `weight`: Peso.
 - `size`: Porte.
-- `menuStyle`: `livre` quando Perfil Personalizado está desligado, `personalizada` quando está ligado.
+- `menuStyle`: `padrao` quando Perfil Personalizado está desligado, `personalizada` quando está ligado.
 - `notes`: Observação preenchida apenas quando Perfil Personalizado está ligado.
 
 ### Receitas

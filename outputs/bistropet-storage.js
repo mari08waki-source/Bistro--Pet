@@ -4,14 +4,14 @@
   const RECIPE_HISTORY_KEY = "bistropet:manual-recipe-history";
   const WEEKLY_PLAN_KEY = "bistropet:weekly-plan";
   const GLOBAL_BLOCKED_KEY = "bistropet:global-blocked-ingredients";
-  const PROFILE_SCHEMA_VERSION = 2;
+  const PROFILE_SCHEMA_VERSION = 3;
 
   const defaultProfile = {
     name: "",
     size: "",
     age: "",
     weight: "",
-    menuStyle: "livre",
+    menuStyle: "padrao",
     notes: "",
     schemaVersion: PROFILE_SCHEMA_VERSION,
     revision: 0,
@@ -124,7 +124,7 @@
       size: String(source.size || ""),
       age: String(source.age || ""),
       weight: String(source.weight || ""),
-      menuStyle: source.menuStyle === "personalizada" ? "personalizada" : "livre",
+      menuStyle: source.menuStyle === "personalizada" ? "personalizada" : "padrao",
       notes: String(source.notes || ""),
       schemaVersion: PROFILE_SCHEMA_VERSION,
       revision: Number(source.revision || 0),
@@ -138,7 +138,8 @@
     const storedProfile = readJson(PROFILE_KEY, {});
     const profile = canonicalProfile(storedProfile);
     const schemaNeedsMigration = storedProfile.schemaVersion !== PROFILE_SCHEMA_VERSION;
-    if (schemaNeedsMigration) {
+    const styleNeedsMigration = storedProfile.menuStyle === "livre";
+    if (schemaNeedsMigration || styleNeedsMigration) {
       profile.revision += 1;
       profile.updatedAt = new Date().toISOString();
       writeJson(PROFILE_KEY, profile);
