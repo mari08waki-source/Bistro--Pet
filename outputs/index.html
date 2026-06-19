@@ -54,17 +54,17 @@
                 <input type="password" value="premium" autocomplete="current-password" />
               </label>
               <div class="auth-links" aria-label="Ações de acesso">
-                <button type="button">Cadastro</button>
-                <button type="button">Esqueci minha senha</button>
+                <button type="button" id="signupButton">Cadastro</button>
+                <button type="button" id="forgotPasswordButton">Esqueci minha senha</button>
               </div>
               <div class="consent-list" aria-label="Aceites obrigatórios">
                 <label class="consent-option">
                   <input type="checkbox" id="acceptTerms" />
-                  <span>Li e aceito os <a href="#">Termos de Uso</a></span>
+                  <span>Li e aceito os <a href="./terms.html">Termos de Uso</a></span>
                 </label>
                 <label class="consent-option">
                   <input type="checkbox" id="acceptPrivacy" />
-                  <span>Li e aceito a <a href="#">Política de Privacidade</a></span>
+                  <span>Li e aceito a <a href="./privacy.html">Política de Privacidade</a></span>
                 </label>
               </div>
               <button class="primary full" type="button" id="createProfile" disabled>Criar perfil</button>
@@ -77,6 +77,8 @@
 	    <script src="./bistropet-accessibility.js"></script>
     <script>
       const createProfileButton = document.getElementById("createProfile");
+      const signupButton = document.getElementById("signupButton");
+      const forgotPasswordButton = document.getElementById("forgotPasswordButton");
       const acceptTerms = document.getElementById("acceptTerms");
       const acceptPrivacy = document.getElementById("acceptPrivacy");
 
@@ -84,10 +86,21 @@
         createProfileButton.disabled = !(acceptTerms.checked && acceptPrivacy.checked);
       }
 
+      function openProfileCreation() {
+        if (createProfileButton.disabled) {
+          alert("Para criar o cadastro, aceite os Termos de Uso e a Politica de Privacidade.");
+          acceptTerms.focus();
+          return;
+        }
+        window.location.href = "./session-2-pet-profile.html";
+      }
+
       [acceptTerms, acceptPrivacy].forEach(input => input.addEventListener("change", updateConsentState));
 
-      createProfileButton.addEventListener("click", () => {
-        window.location.href = "./session-2-pet-profile.html";
+      createProfileButton.addEventListener("click", openProfileCreation);
+      signupButton.addEventListener("click", openProfileCreation);
+      forgotPasswordButton.addEventListener("click", () => {
+        alert("A recuperacao de senha sera ativada quando o login real for conectado. Nesta versao, o acesso demonstrativo nao armazena senha.");
       });
     </script>
   </body>

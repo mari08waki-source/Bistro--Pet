@@ -405,14 +405,6 @@
         syncRestrictionsFromProfile();
       }
 
-      function splitFreeList(value) {
-        const listed = splitPersonalizedList(value);
-        if (listed.length !== 1 || /[,.;\n]/.test(String(value || ""))) return listed;
-        const clean = cleanItem(value);
-        if (!clean || !/\s/.test(clean)) return listed;
-        return clean.split(/\s+/).map(cleanItem).filter(Boolean);
-      }
-
       function sameIngredient(a, b) {
         const left = normalize(a);
         const right = normalize(b);
