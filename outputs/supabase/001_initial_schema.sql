@@ -24,7 +24,7 @@ create table if not exists public.pet_profiles (
   size_text text not null default '',
   menu_style text not null default 'padrao',
   notes text not null default '',
-  schema_version integer not null default 2,
+  schema_version integer not null default 3,
   revision integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
