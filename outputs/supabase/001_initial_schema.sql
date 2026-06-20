@@ -33,8 +33,6 @@ create table if not exists public.pet_profiles (
   constraint pet_profiles_one_profile_per_user unique (user_id)
 );
 
-create index if not exists pet_profiles_user_id_idx on public.pet_profiles(user_id);
-
 drop trigger if exists set_pet_profiles_updated_at on public.pet_profiles;
 create trigger set_pet_profiles_updated_at
 before update on public.pet_profiles
@@ -43,7 +41,7 @@ for each row execute function public.set_updated_at();
 create table if not exists public.pet_blocked_ingredients (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  pet_profile_id uuid not null references public.pet_profiles(id) on delete cascade,
+  pet_profile_id uuid not null,
   ingredient_name text not null,
   source text not null default 'manual_recipe',
   created_at timestamptz not null default now(),
@@ -53,12 +51,11 @@ create table if not exists public.pet_blocked_ingredients (
 );
 
 create index if not exists pet_blocked_ingredients_user_id_idx on public.pet_blocked_ingredients(user_id);
-create index if not exists pet_blocked_ingredients_pet_profile_id_idx on public.pet_blocked_ingredients(pet_profile_id);
 
 create table if not exists public.recipe_generations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  pet_profile_id uuid not null references public.pet_profiles(id) on delete cascade,
+  pet_profile_id uuid not null,
   recipe_type text not null,
   title text not null default '',
   description text not null default '',
@@ -87,7 +84,7 @@ for each row execute function public.set_updated_at();
 create table if not exists public.saved_recipes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  pet_profile_id uuid not null references public.pet_profiles(id) on delete cascade,
+  pet_profile_id uuid not null,
   recipe_generation_id uuid,
   history_key text not null,
   title text not null default '',
@@ -103,14 +100,13 @@ create table if not exists public.saved_recipes (
   constraint saved_recipes_unique_history_key unique (user_id, history_key)
 );
 
-create index if not exists saved_recipes_user_id_idx on public.saved_recipes(user_id);
 create index if not exists saved_recipes_pet_profile_id_idx on public.saved_recipes(pet_profile_id);
 create index if not exists saved_recipes_created_at_idx on public.saved_recipes(created_at desc);
 
 create table if not exists public.weekly_plans (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  pet_profile_id uuid not null references public.pet_profiles(id) on delete cascade,
+  pet_profile_id uuid not null,
   plan_mode text not null,
   title text not null default 'Plano semanal',
   created_at timestamptz not null default now(),
@@ -132,12 +128,13 @@ for each row execute function public.set_updated_at();
 create table if not exists public.weekly_plan_days (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  weekly_plan_id uuid not null references public.weekly_plans(id) on delete cascade,
+  weekly_plan_id uuid not null,
   day_index integer not null,
   day_name text not null,
   title text not null default '',
   ingredients jsonb not null default '[]'::jsonb,
   prep text not null default '',
+  note text not null default '',
   image_url text,
   profile_snapshot jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
@@ -148,7 +145,6 @@ create table if not exists public.weekly_plan_days (
 );
 
 create index if not exists weekly_plan_days_user_id_idx on public.weekly_plan_days(user_id);
-create index if not exists weekly_plan_days_weekly_plan_id_idx on public.weekly_plan_days(weekly_plan_id);
 
 alter table public.pet_profiles enable row level security;
 alter table public.pet_blocked_ingredients enable row level security;
