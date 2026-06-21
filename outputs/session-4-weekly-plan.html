@@ -31,6 +31,8 @@
 	      #weeklyPlanner:not(.is-generated) .weekly-audio-actions { display: none; }
 	      #weeklyPlanner .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
 	      #weeklyPlanner .ingredient-list li { display: block; width: 100%; }
+      .weekly-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .weekly-back { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--sage-dark); cursor: pointer; padding: 4px; font-size: 20px; line-height: 1; text-decoration: none; }
     </style>
   </head>
   <body class="session-three-body">
@@ -44,7 +46,10 @@
       </section>
 
       <section class="bistro-menu weekly-heading">
-        <p class="meal-eyebrow">Menu Bistro</p>
+        <div class="weekly-heading-row">
+          <p class="meal-eyebrow">Menu Bistro</p>
+          <a class="weekly-back" href="./session-3-meal.html" aria-label="Voltar para receitas" title="Voltar para receitas">&larr;</a>
+        </div>
         <h1>O chef vai organizar a semana da Luna.</h1>
       </section>
 
@@ -85,6 +90,7 @@
           </div>
         </div>
       </section>
+
     </main>
 	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
 	    <script src="./bistropet-supabase.js"></script>
