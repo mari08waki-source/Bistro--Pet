@@ -1,37 +1,212 @@
-const moduleNames = { dashboard:"Dashboard",users:"Usuários",pets:"Pets",recipes:"Receitas",weekly:"Planos Semanais",history:"Histórico",logs:"Logs e Erros",settings:"Configurações",backup:"Backup / Exportação" };
-const keys = { profile:"bistropet:pet-profile",lastRecipe:"bistropet:last-recipe",history:"bistropet:manual-recipe-history",weeklyPlan:"bistropet:weekly-plan",imageClientId:"bistropet:image-client-id" };
+const moduleNames = {
+  dashboard: "Dashboard",
+  users: "Usuários",
+  pets: "Pets",
+  recipes: "Receitas",
+  weekly: "Planos Semanais",
+  history: "Histórico",
+  logs: "Logs e Erros",
+  settings: "Configurações",
+  backup: "Backup / Exportação"
+};
 let detailRecords = [];
-function readJson(key,fallback){try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback}catch(error){return fallback}}
-function readText(key){try{return localStorage.getItem(key)||""}catch(error){return""}}
-function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[char]))}
-function formatDateTime(value){const date=new Date(value);return Number.isNaN(date.getTime())?"Não registrada":date.toLocaleString("pt-BR")}
-function typeLabel(mode){return{personalizada:"Receita Personalizada",chef:"Sugestão do Chefe"}[mode]||"Tipo antigo/removido"}
-function profileModeLabel(menuStyle){return menuStyle==="personalizada"?"Perfil Personalizado ligado":"Perfil Personalizado desligado"}
-function weeklyModeLabel(mode){return{auto:"Automático",custom:"Personalizado"}[mode]||"Não registrado"}
-function currentData(){return{profile:readJson(keys.profile,null),lastRecipe:readJson(keys.lastRecipe,null),history:readJson(keys.history,[]),weeklyPlan:readJson(keys.weeklyPlan,null),imageClientId:readText(keys.imageClientId)}}
-function statusBadge(label,tone="neutral"){return`<span class="table-status ${tone}">${escapeHtml(label)}</span>`}
-function detailButton(record){const index=detailRecords.push(record)-1;return`<button class="detail-button" type="button" data-detail-index="${index}">Ver detalhes</button>`}
-function table(headers,rows,empty){if(!rows.length)return`<article class="compact-empty">${escapeHtml(empty)}</article>`;return`<div class="table-shell"><table class="admin-table"><thead><tr>${headers.map(h=>`<th>${escapeHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`}
-function recipeDetail(recipe){return{title:recipe.title||"Receita sem nome",meta:`${typeLabel(recipe.mode)} · ${formatDateTime(recipe.createdAt)}`,ingredients:Array.isArray(recipe.ingredients)?recipe.ingredients:[],steps:Array.isArray(recipe.steps)?recipe.steps:[]}}
-function weeklyDetail(plan){const mode=plan[0]&&plan[0].planMode;return{title:"Plano semanal",meta:`${weeklyModeLabel(mode)} · ${plan.length} refeição(ões) · Data não registrada`,days:plan.map(item=>({day:item.day||"Dia",title:item.title||"Receita sem nome",mode:weeklyModeLabel(item.planMode),ingredients:Array.isArray(item.ingredients)?item.ingredients:[],prep:item.prep||""}))}}
-function renderDetail(record){const content=document.getElementById("detailContent");content.innerHTML=record.days?`<p class="eyebrow">${escapeHtml(record.meta)}</p><h2>${escapeHtml(record.title)}</h2><div class="detail-days">${record.days.map(item=>`<article><strong>${escapeHtml(item.day)} · ${escapeHtml(item.title)}</strong><p>${escapeHtml(item.mode)}</p><p>${escapeHtml(item.ingredients.join(", "))}</p><p>${escapeHtml(item.prep)}</p></article>`).join("")}</div>`:`<p class="eyebrow">${escapeHtml(record.meta)}</p><h2>${escapeHtml(record.title)}</h2><section class="detail-block"><h3>Ingredientes utilizados</h3><ul>${record.ingredients.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section class="detail-block"><h3>Modo de preparo</h3><ol>${record.steps.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol></section>`;document.getElementById("detailPanel").hidden=false}
-function renderDashboard(data,history,weekly){const last=history.map(item=>item&&item.createdAt).filter(Boolean).sort().reverse()[0];document.getElementById("metricCreated").textContent=data.lastRecipe?"1":"0";document.getElementById("metricSaved").textContent=String(history.length);document.getElementById("metricPlans").textContent=weekly.length?"1":"0";document.getElementById("metricProfile").textContent=data.profile?"Preenchido":"Não";document.getElementById("metricLastActivity").textContent=formatDateTime(last);document.getElementById("metricGeneralStatus").textContent=data.profile&&data.lastRecipe&&weekly.length?"Operacional":"Atenção";document.getElementById("lastReadAt").textContent=`Atualizado: ${new Date().toLocaleString("pt-BR")}`}
-function renderAdminData(){detailRecords=[];const data=currentData();const history=Array.isArray(data.history)?data.history:[];const weekly=Array.isArray(data.weeklyPlan)?data.weeklyPlan:[];renderDashboard(data,history,weekly);
-document.getElementById("usersContent").innerHTML=table(["Dado","Status"],[],"O aplicativo atual não armazena usuários cadastrados; o email e a senha da tela inicial são demonstrativos e não persistem.");
-document.getElementById("petsContent").innerHTML=table(["Nome do pet","Nome do tutor","Idade","Peso","Porte","Perfil personalizado","Observação"],data.profile?[[escapeHtml(data.profile.name||"Pet sem nome"),escapeHtml(data.profile.tutor||"Não informado"),escapeHtml(data.profile.age||"Não informado"),escapeHtml(data.profile.weight||"Não informado"),escapeHtml(data.profile.size||"Não informado"),escapeHtml(profileModeLabel(data.profile.menuStyle)),escapeHtml(data.profile.notes||"Não informado")]]:[],"Nenhum perfil de pet encontrado.");
-const entries=[];if(data.lastRecipe)entries.push({recipe:data.lastRecipe,status:"Criada",tone:"created"});history.forEach(recipe=>entries.push({recipe,status:"Salva",tone:"saved"}));
-document.getElementById("recipesContent").innerHTML=table(["Tipo","Nome da receita","Data / hora","Status","Ação"],entries.map(entry=>[escapeHtml(typeLabel(entry.recipe.mode)),escapeHtml(entry.recipe.title||"Receita sem nome"),escapeHtml(formatDateTime(entry.recipe.createdAt)),statusBadge(entry.status,entry.tone),detailButton(recipeDetail(entry.recipe))]),"Nenhuma receita encontrada.");
-document.getElementById("weeklyContent").innerHTML=table(["Tipo","Data de criação","Quantidade de refeições","Dias identificados","Status","Ação"],weekly.length?[[weeklyModeLabel(weekly[0]&&weekly[0].planMode),"Não registrada",String(weekly.length),escapeHtml(weekly.map(item=>item.day).filter(Boolean).join(", ")),statusBadge("Criado","created"),detailButton(weeklyDetail(weekly))]]:[],"Nenhum plano semanal encontrado.");
-document.getElementById("historyContent").innerHTML=table(["Nome da receita","Tipo","Data / hora","Ação"],history.map(recipe=>[escapeHtml(recipe.title||"Receita sem nome"),escapeHtml(typeLabel(recipe.mode)),escapeHtml(formatDateTime(recipe.createdAt)),detailButton(recipeDetail(recipe))]),"Nenhuma receita salva no histórico.");
-document.getElementById("logsContent").innerHTML='<article class="compact-empty">O aplicativo atual não armazena logs ou erros.</article>';
-document.getElementById("settingsContent").innerHTML=table(["Configuração","Valor","Status"],[["Identificador local de imagens",escapeHtml(data.imageClientId||"Não disponível"),statusBadge(data.imageClientId?"Encontrado":"Ausente",data.imageClientId?"saved":"neutral")]],"Nenhuma configuração local encontrada.");
-document.getElementById("backupContent").innerHTML='<article class="compact-empty">A exportação inclui perfil, última receita, receitas salvas, plano semanal e configurações locais sem modificar os dados.</article>'}
-function exportData(){const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),data:currentData()},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`bistro-pet-backup-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url)}
-document.getElementById("previewAdmin").addEventListener("click",()=>{renderAdminData();document.getElementById("adminLogin").hidden=true;document.getElementById("adminApp").hidden=false});
-document.getElementById("refreshData").addEventListener("click",renderAdminData);
-document.getElementById("exitPreview").addEventListener("click",()=>{document.getElementById("adminApp").hidden=true;document.getElementById("adminLogin").hidden=false});
-document.querySelectorAll("[data-module]").forEach(button=>button.addEventListener("click",()=>{const module=button.dataset.module;document.querySelectorAll("[data-module]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-panel]").forEach(panel=>panel.classList.toggle("active",panel.dataset.panel===module));document.getElementById("moduleTitle").textContent=moduleNames[module]}));
-document.addEventListener("click",event=>{const button=event.target.closest("[data-detail-index]");if(button)renderDetail(detailRecords[Number(button.dataset.detailIndex)])});
-document.getElementById("closeDetail").addEventListener("click",()=>document.getElementById("detailPanel").hidden=true);
-document.getElementById("detailPanel").addEventListener("click",event=>{if(event.target.id==="detailPanel")event.currentTarget.hidden=true});
-document.getElementById("exportData").addEventListener("click",exportData);
+let loadedData = null;
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
+  })[char]);
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Não registrada" : date.toLocaleString("pt-BR");
+}
+
+function typeLabel(mode) {
+  return { personalizada: "Receita Personalizada", chef: "Sugestão do Chefe" }[mode] || "Tipo antigo/removido";
+}
+
+function profileModeLabel(menuStyle) {
+  return menuStyle === "personalizada" ? "Perfil Personalizado ligado" : "Perfil Personalizado desligado";
+}
+
+function weeklyModeLabel(mode) {
+  return { auto: "Automático", custom: "Personalizado" }[mode] || "Não registrado";
+}
+
+function currentData() {
+  const user = window.BistroPetStorage.getCurrentUser();
+  return {
+    user,
+    profile: window.BistroPetStorage.hasPetProfile() ? window.BistroPetStorage.getPetProfile() : null,
+    lastRecipe: window.BistroPetStorage.getLastRecipe(),
+    history: window.BistroPetStorage.getRecipeHistory(),
+    weeklyPlan: window.BistroPetStorage.getWeeklyPlan(),
+    imageClientId: user?.id || ""
+  };
+}
+
+function statusBadge(label, tone = "neutral") {
+  return `<span class="table-status ${tone}">${escapeHtml(label)}</span>`;
+}
+
+function detailButton(record) {
+  const index = detailRecords.push(record) - 1;
+  return `<button class="detail-button" type="button" data-detail-index="${index}">Ver detalhes</button>`;
+}
+
+function table(headers, rows, empty) {
+  if (!rows.length) return `<article class="compact-empty">${escapeHtml(empty)}</article>`;
+  return `<div class="table-shell"><table class="admin-table"><thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+function recipeDetail(recipe) {
+  return {
+    title: recipe.title || "Receita sem nome",
+    meta: `${typeLabel(recipe.mode)} · ${formatDateTime(recipe.createdAt)}`,
+    ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+    steps: Array.isArray(recipe.steps) ? recipe.steps : []
+  };
+}
+
+function weeklyDetail(plan) {
+  const mode = plan[0]?.planMode;
+  return {
+    title: "Plano semanal",
+    meta: `${weeklyModeLabel(mode)} · ${plan.length} refeição(ões) · Data não registrada`,
+    days: plan.map(item => ({
+      day: item.day || "Dia",
+      title: item.title || "Receita sem nome",
+      mode: weeklyModeLabel(item.planMode),
+      ingredients: Array.isArray(item.ingredients) ? item.ingredients : [],
+      prep: item.prep || ""
+    }))
+  };
+}
+
+function renderDetail(record) {
+  const content = document.getElementById("detailContent");
+  content.innerHTML = record.days
+    ? `<p class="eyebrow">${escapeHtml(record.meta)}</p><h2>${escapeHtml(record.title)}</h2><div class="detail-days">${record.days.map(item => `<article><strong>${escapeHtml(item.day)} · ${escapeHtml(item.title)}</strong><p>${escapeHtml(item.mode)}</p><p>${escapeHtml(item.ingredients.join(", "))}</p><p>${escapeHtml(item.prep)}</p></article>`).join("")}</div>`
+    : `<p class="eyebrow">${escapeHtml(record.meta)}</p><h2>${escapeHtml(record.title)}</h2><section class="detail-block"><h3>Ingredientes utilizados</h3><ul>${record.ingredients.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section class="detail-block"><h3>Modo de preparo</h3><ol>${record.steps.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>`;
+  document.getElementById("detailPanel").hidden = false;
+}
+
+function renderDashboard(data, history, weekly) {
+  const last = history.map(item => item?.createdAt).filter(Boolean).sort().reverse()[0];
+  document.getElementById("metricCreated").textContent = data.lastRecipe ? "1" : "0";
+  document.getElementById("metricSaved").textContent = String(history.length);
+  document.getElementById("metricPlans").textContent = weekly.length ? "1" : "0";
+  document.getElementById("metricProfile").textContent = data.profile ? "Preenchido" : "Não";
+  document.getElementById("metricLastActivity").textContent = formatDateTime(last);
+  document.getElementById("metricGeneralStatus").textContent = data.profile && data.lastRecipe && weekly.length ? "Operacional" : "Atenção";
+  document.getElementById("lastReadAt").textContent = `Atualizado: ${new Date().toLocaleString("pt-BR")}`;
+}
+
+function renderAdminData() {
+  detailRecords = [];
+  const data = currentData();
+  loadedData = data;
+  const history = Array.isArray(data.history) ? data.history : [];
+  const weekly = Array.isArray(data.weeklyPlan) ? data.weeklyPlan : [];
+  renderDashboard(data, history, weekly);
+
+  document.getElementById("usersContent").innerHTML = table(
+    ["Dado", "Status"],
+    data.user ? [[escapeHtml(data.user.email || "Usuário autenticado"), statusBadge("Autenticado", "saved")]] : [],
+    "Nenhum usuário autenticado."
+  );
+  document.getElementById("petsContent").innerHTML = table(
+    ["Nome do pet", "Nome do tutor", "Idade", "Peso", "Porte", "Perfil personalizado", "Observação"],
+    data.profile ? [[
+      escapeHtml(data.profile.name || "Pet sem nome"), escapeHtml(data.profile.tutor || "Não informado"),
+      escapeHtml(data.profile.age || "Não informado"), escapeHtml(data.profile.weight || "Não informado"),
+      escapeHtml(data.profile.size || "Não informado"), escapeHtml(profileModeLabel(data.profile.menuStyle)),
+      escapeHtml(data.profile.notes || "Não informado")
+    ]] : [],
+    "Nenhum perfil de pet encontrado."
+  );
+
+  const entries = [];
+  if (data.lastRecipe) entries.push({ recipe: data.lastRecipe, status: "Criada", tone: "created" });
+  history.forEach(recipe => entries.push({ recipe, status: "Salva", tone: "saved" }));
+  document.getElementById("recipesContent").innerHTML = table(
+    ["Tipo", "Nome da receita", "Data / hora", "Status", "Ação"],
+    entries.map(entry => [
+      escapeHtml(typeLabel(entry.recipe.mode)), escapeHtml(entry.recipe.title || "Receita sem nome"),
+      escapeHtml(formatDateTime(entry.recipe.createdAt)), statusBadge(entry.status, entry.tone), detailButton(recipeDetail(entry.recipe))
+    ]),
+    "Nenhuma receita encontrada."
+  );
+  document.getElementById("weeklyContent").innerHTML = table(
+    ["Tipo", "Data de criação", "Quantidade de refeições", "Dias identificados", "Status", "Ação"],
+    weekly.length ? [[
+      weeklyModeLabel(weekly[0]?.planMode), "Não registrada", String(weekly.length),
+      escapeHtml(weekly.map(item => item.day).filter(Boolean).join(", ")), statusBadge("Criado", "created"), detailButton(weeklyDetail(weekly))
+    ]] : [],
+    "Nenhum plano semanal encontrado."
+  );
+  document.getElementById("historyContent").innerHTML = table(
+    ["Nome da receita", "Tipo", "Data / hora", "Ação"],
+    history.map(recipe => [
+      escapeHtml(recipe.title || "Receita sem nome"), escapeHtml(typeLabel(recipe.mode)),
+      escapeHtml(formatDateTime(recipe.createdAt)), detailButton(recipeDetail(recipe))
+    ]),
+    "Nenhuma receita salva no histórico."
+  );
+  document.getElementById("logsContent").innerHTML = '<article class="compact-empty">O aplicativo atual não armazena logs ou erros.</article>';
+  document.getElementById("settingsContent").innerHTML = table(
+    ["Configuração", "Valor", "Status"],
+    [["Identificador local de imagens", escapeHtml(data.imageClientId || "Não disponível"), statusBadge(data.imageClientId ? "Encontrado" : "Ausente", data.imageClientId ? "saved" : "neutral")]],
+    "Nenhuma configuração encontrada."
+  );
+  document.getElementById("backupContent").innerHTML = '<article class="compact-empty">A exportação inclui perfil, última receita, receitas salvas, plano semanal e configurações sem modificar os dados.</article>';
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), data: loadedData || currentData() }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `bistro-pet-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+async function enterAdmin() {
+  const email = document.getElementById("adminEmail").value.trim();
+  const password = document.getElementById("adminPassword").value;
+  let user = await window.BistroPetSupabase.sessionUser();
+  if (!user) {
+    if (!email || !password) throw new Error("Preencha o email e a senha.");
+    await window.BistroPetSupabase.signIn(email, password);
+  }
+  await window.BistroPetStorage.refresh();
+  renderAdminData();
+  document.getElementById("adminLogin").hidden = true;
+  document.getElementById("adminApp").hidden = false;
+}
+
+document.getElementById("previewAdmin").addEventListener("click", () => enterAdmin().catch(error => alert(error.message || "Não foi possível entrar.")));
+document.getElementById("refreshData").addEventListener("click", () => window.BistroPetStorage.refresh().then(renderAdminData).catch(error => alert(error.message)));
+document.getElementById("exitPreview").addEventListener("click", () => {
+  window.BistroPetSupabase.signOut().catch(() => {});
+  document.getElementById("adminApp").hidden = true;
+  document.getElementById("adminLogin").hidden = false;
+});
+document.querySelectorAll("[data-module]").forEach(button => button.addEventListener("click", () => {
+  const module = button.dataset.module;
+  document.querySelectorAll("[data-module]").forEach(item => item.classList.toggle("active", item === button));
+  document.querySelectorAll("[data-panel]").forEach(panel => panel.classList.toggle("active", panel.dataset.panel === module));
+  document.getElementById("moduleTitle").textContent = moduleNames[module];
+}));
+document.addEventListener("click", event => {
+  const button = event.target.closest("[data-detail-index]");
+  if (button) renderDetail(detailRecords[Number(button.dataset.detailIndex)]);
+});
+document.getElementById("closeDetail").addEventListener("click", () => { document.getElementById("detailPanel").hidden = true; });
+document.getElementById("detailPanel").addEventListener("click", event => {
+  if (event.target.id === "detailPanel") event.currentTarget.hidden = true;
+});
+document.getElementById("exportData").addEventListener("click", exportData);

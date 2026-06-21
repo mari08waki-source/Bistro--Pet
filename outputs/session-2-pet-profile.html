@@ -78,15 +78,23 @@
         </form>
       </section>
     </main>
-	    <script src="./bistropet-storage.js?v=clean-profile-state"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
+	    <script src="./bistropet-supabase.js"></script>
+	    <script src="./bistropet-storage.js?v=supabase-profile"></script>
 	    <script src="./bistropet-accessibility.js?v=tts-natural-ingredients"></script>
     <script>
+      (async function () {
+      if (!await window.BistroPetStorage.ready()) {
+        window.location.replace("./index.html");
+        return;
+      }
       const petProfileForm = document.getElementById("petProfileForm");
 	      const savePetProfileButton = document.getElementById("savePetProfile");
 	      const observationCard = document.getElementById("observationCard");
 	      const observationField = petProfileForm.elements.notes;
 	      const customProfile = document.getElementById("customProfile");
       const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
+      let saveTimer;
       const observationFoodWords = [
         "mandioquinha", "beterraba", "abobrinha", "mandioca", "cenoura", "batata", "frango",
         "chuchu", "carne", "peixe", "tilapia", "salmao", "arroz", "milho", "inhame",
@@ -124,27 +132,8 @@
         if (!customProfile.checked) observationField.value = "";
       }
 
-      function clearNewProfileData() {
-        window.localStorage.removeItem("bistropet:pet-profile");
-        window.localStorage.removeItem("bistropet:last-recipe");
-        window.localStorage.removeItem("bistropet:manual-recipe-history");
-        window.localStorage.removeItem("bistropet:weekly-plan");
-        window.localStorage.removeItem("bistropet:global-blocked-ingredients");
-        window.sessionStorage.removeItem("bistropet:session3:special");
-        window.sessionStorage.removeItem("bistropet:session3:blocked");
-        window.sessionStorage.removeItem("bistropet:session3:index");
-        [...petProfileForm.elements].forEach(field => {
-          if (field.matches && field.matches("input:not([type='radio']), textarea")) field.value = "";
-        });
-	        customProfile.checked = false;
-	        syncProfileModeFields();
-      }
-
       function fillPetProfileForm() {
-        if (!isEditingProfile) {
-          clearNewProfileData();
-          return;
-        }
+        if (!window.BistroPetStorage.hasPetProfile() && !isEditingProfile) return;
         const profile = window.BistroPetStorage.getPetProfile();
         Object.entries(profile).forEach(([key, value]) => {
           const field = petProfileForm.elements[key];
@@ -167,19 +156,33 @@
         };
       }
 
-      function savePetProfile() {
-        const savedProfile = window.BistroPetStorage.savePetProfile(collectPetProfileForm());
+      async function savePetProfile() {
+        const savedProfile = await window.BistroPetStorage.savePetProfile(collectPetProfileForm());
         observationField.value = savedProfile.notes || "";
+        return savedProfile;
       }
 
-      function continueToRecipe() {
-        savePetProfile();
-        window.location.href = `./session-3-meal.html?v=visible-blocked-list-${Date.now()}`;
+      function scheduleProfileSave() {
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => {
+          savePetProfile().catch(error => alert(error.message || "Não foi possível salvar o perfil."));
+        }, 500);
+      }
+
+      async function continueToRecipe() {
+        try {
+          savePetProfileButton.disabled = true;
+          await savePetProfile();
+          window.location.href = `./session-3-meal.html?v=supabase-profile-${Date.now()}`;
+        } catch (error) {
+          alert(error.message || "Não foi possível salvar o perfil.");
+          savePetProfileButton.disabled = false;
+        }
       }
 
 	      customProfile.addEventListener("change", () => {
 	        syncProfileModeFields();
-	        savePetProfile();
+	        scheduleProfileSave();
 	      });
       observationField.addEventListener("input", () => {
         const original = observationField.value;
@@ -210,9 +213,10 @@
           }, 700);
         });
       });
-      petProfileForm.addEventListener("input", savePetProfile);
+      petProfileForm.addEventListener("input", scheduleProfileSave);
       savePetProfileButton.addEventListener("click", continueToRecipe);
       fillPetProfileForm();
+      })().catch(error => alert(error.message || "Não foi possível carregar o perfil."));
     </script>
   </body>
 </html>

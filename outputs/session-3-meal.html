@@ -247,9 +247,16 @@
       </section>
     </div>
 
-	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
+	    <script src="./bistropet-supabase.js"></script>
+	    <script src="./bistropet-storage.js?v=supabase-recipes"></script>
 	    <script src="./bistropet-accessibility.js?v=tts-natural-ingredients"></script>
     <script>
+      (async function () {
+      if (!await window.BistroPetStorage.ready()) {
+        window.location.replace("./index.html");
+        return;
+      }
       const modeCopy = {
         personalizada: {
           title: "Personalizada",
@@ -590,18 +597,18 @@
         renderState();
       }
 
-      function saveBlockedIngredients() {
+      async function saveBlockedIngredients() {
         blockedIngredients = uniqueItems(blockedIngredients);
         if (window.BistroPetStorage && window.BistroPetStorage.saveGlobalBlockedIngredients) {
           const officialRestrictions = profileBlockedItems();
           const manualRestrictions = blockedIngredients.filter(item =>
             !officialRestrictions.some(official => sameIngredient(item, official))
           );
-          window.BistroPetStorage.saveGlobalBlockedIngredients(manualRestrictions);
+          await window.BistroPetStorage.saveGlobalBlockedIngredients(manualRestrictions);
         }
       }
 
-      function addBlockedItems(input = restrictedInput) {
+      async function addBlockedItems(input = restrictedInput) {
         if (!input || !("value" in input)) input = restrictedInput;
         if (input === restrictedInput) {
           const items = splitBlockedList(input.value);
@@ -614,7 +621,7 @@
             ...currentPersonalizedBlockedIngredients
           ]);
           blockedIngredients = uniqueItems([...blockedIngredients, ...items]);
-          saveBlockedIngredients();
+          await saveBlockedIngredients();
           specialIngredients = specialIngredients.filter(item => !isPersonalizedBlocked(item));
           saveSessionList(sessionKeys.special, specialIngredients);
           input.value = "";
@@ -629,7 +636,7 @@
         renderState();
       }
 
-      function removeItem(type, value) {
+      async function removeItem(type, value) {
         if (type === "special") {
           specialIngredients = specialIngredients.filter(item => !sameIngredient(item, value));
           saveSessionList(sessionKeys.special, specialIngredients);
@@ -641,7 +648,7 @@
           const officialRestrictions = profileBlockedItems();
           const isOfficialRestriction = officialRestrictions.some(item => sameIngredient(item, value));
           if (!isOfficialRestriction && window.BistroPetStorage && window.BistroPetStorage.getGlobalBlockedIngredients && window.BistroPetStorage.saveGlobalBlockedIngredients) {
-            window.BistroPetStorage.saveGlobalBlockedIngredients(
+            await window.BistroPetStorage.saveGlobalBlockedIngredients(
               window.BistroPetStorage.getGlobalBlockedIngredients().filter(item => !sameIngredient(item, value))
             );
           }
@@ -879,18 +886,13 @@
       }
 
       function imageClientId() {
-        const key = "bistropet:image-client-id";
-        let value = window.localStorage.getItem(key);
-        if (!value) {
-          value = `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          window.localStorage.setItem(key, value);
-        }
-        return value;
+        return window.BistroPetStorage.getCurrentUser()?.id || "authenticated-user";
       }
 
       async function generateRecipeImage(recipe) {
         const photo = document.getElementById("mealPhoto");
         const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        recipe.requestId = requestId;
         photo.dataset.imageRequestId = requestId;
         photo.hidden = true;
         photo.removeAttribute("src");
@@ -916,7 +918,7 @@
           recipe.image = image.imageUrl;
           photo.src = image.imageUrl;
           photo.hidden = false;
-          if (window.BistroPetStorage) window.BistroPetStorage.saveLastRecipe(recipe);
+          if (window.BistroPetStorage) await window.BistroPetStorage.saveLastRecipe(recipe);
         } catch (error) {
           if (photo.dataset.imageRequestId === requestId) {
             photo.hidden = true;
@@ -983,13 +985,13 @@
         resetRecipeCard();
       }
 
-      function generateRecipe() {
+      async function generateRecipe() {
         clearWarnings();
         syncRestrictionsFromProfile();
         renderState();
 
         if (activeRecipeMode === "personalizada" && restrictedInput.value.trim()) {
-          addBlockedItems(restrictedInput);
+          await addBlockedItems(restrictedInput);
         }
         if (activeRecipeMode === "personalizada" && !specialIngredients.length) {
           showWarning(activeRecipeMode, "Adicione ao menos um ingrediente especial para criar a receita.");
@@ -1010,7 +1012,7 @@
 
         renderRecipe(recipe);
         if (window.BistroPetStorage) {
-          window.BistroPetStorage.saveLastRecipe(recipe);
+          await window.BistroPetStorage.saveLastRecipe(recipe);
         }
         generateRecipeImage(recipe);
         recipeIndex += 1;
@@ -1030,7 +1032,9 @@
       document.getElementById("addSpecialIngredient").addEventListener("click", () => {
         addItems({ input: specialInput, listName: "special", warningMode: "personalizada" });
       });
-      document.getElementById("addBlockedIngredient").addEventListener("click", addBlockedItems);
+      document.getElementById("addBlockedIngredient").addEventListener("click", () => {
+        addBlockedItems().catch(error => alert(error.message || "Não foi possível salvar o alimento proibido."));
+      });
       [specialInput, restrictedInput].forEach(input => {
         input.addEventListener("keydown", event => {
           if (event.key === "Enter") {
@@ -1043,18 +1047,24 @@
       document.addEventListener("click", event => {
         const button = event.target.closest("[data-remove-special], [data-remove-personalized-blocked]");
         if (!button) return;
-        if (button.dataset.removeSpecial) removeItem("special", button.dataset.removeSpecial);
-        if (button.dataset.removePersonalizedBlocked) removeItem("personalized-blocked", button.dataset.removePersonalizedBlocked);
+        if (button.dataset.removeSpecial) removeItem("special", button.dataset.removeSpecial).catch(error => alert(error.message));
+        if (button.dataset.removePersonalizedBlocked) removeItem("personalized-blocked", button.dataset.removePersonalizedBlocked).catch(error => alert(error.message));
       });
       document.querySelectorAll(".mode-pill").forEach(button => {
         button.addEventListener("click", () => setMode(button.dataset.mode));
       });
-      document.getElementById("createRecipe").addEventListener("click", generateRecipe);
-	      document.getElementById("saveRecipeToHistory").addEventListener("click", event => {
+      document.getElementById("createRecipe").addEventListener("click", () => {
+        generateRecipe().catch(error => alert(error.message || "Não foi possível criar a receita."));
+      });
+	      document.getElementById("saveRecipeToHistory").addEventListener("click", async event => {
         if (!currentGeneratedRecipe || !window.BistroPetStorage || !window.BistroPetStorage.addRecipeToHistory) return;
-        window.BistroPetStorage.addRecipeToHistory(currentGeneratedRecipe);
-        event.currentTarget.textContent = "Salvo";
-        event.currentTarget.disabled = true;
+        try {
+          await window.BistroPetStorage.addRecipeToHistory(currentGeneratedRecipe);
+          event.currentTarget.textContent = "Salvo";
+          event.currentTarget.disabled = true;
+        } catch (error) {
+          alert(error.message || "Não foi possível salvar a receita.");
+        }
 	      });
 	      document.getElementById("listenRecipe").addEventListener("click", () => {
 	        if (currentGeneratedRecipe && window.BistroPetAccessibility) {
@@ -1092,6 +1102,7 @@
       refreshProfileCopy();
       renderState();
       setMode(activeRecipeMode);
+      })().catch(error => alert(error.message || "Não foi possível carregar as receitas."));
     </script>
   </body>
 </html>

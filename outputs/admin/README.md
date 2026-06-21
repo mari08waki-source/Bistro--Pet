@@ -1,16 +1,16 @@
 # Bistro Pet Admin
 
-Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos dados locais existentes do Bistro Pet.
+Painel administrativo isolado em `/admin`, autenticado pelo Supabase e limitado pelos mesmos controles RLS do Bistro Pet.
 
 ## Arquivos
 
 - `index.html`: login visual, navegação e módulos administrativos.
 - `styles.css`: estilos exclusivos da área administrativa.
-- `admin.js`: leitura, organização, exibição e exportação dos dados locais.
+- `admin.js`: autenticação, leitura, organização, exibição e exportação dos dados do usuário autenticado.
 
 ## Integração atual
 
-- Funciona como Central Administrativa somente leitura.
+- Funciona como Central Administrativa somente leitura para a sessão autenticada.
 - Exibe totais disponíveis de perfis, receitas salvas e planos semanais.
 - Exibe a última atividade quando existe uma data realmente armazenada.
 - Trata receitas salvas manualmente como favoritas escolhidas pelo usuário.
@@ -18,7 +18,7 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 - Monta um log visual a partir dos últimos dados existentes, sem registrar eventos.
 - Verifica dados válidos e possíveis inconsistências estruturais.
 - Exibe Dashboard Operacional com status geral e data da última leitura.
-- Verifica a integridade das cinco chaves locais utilizadas pelo painel.
+- Lê os dados das seis tabelas do Supabase por meio da camada oficial do aplicativo.
 - Diagnostica o estado das Seções 2, 3 e 4.
 - Exibe os últimos eventos já existentes sem criar histórico novo.
 - Exibe Perfil do Pet com Nome do Pet, Nome do Tutor, Idade, Peso, Porte, Perfil Personalizado e Observação.
@@ -31,11 +31,12 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 
 ## Fontes lidas
 
-- `bistropet:pet-profile`
-- `bistropet:last-recipe`
-- `bistropet:manual-recipe-history`
-- `bistropet:weekly-plan`
-- `bistropet:image-client-id`
+- `pet_profiles`
+- `pet_blocked_ingredients`
+- `recipe_generations`
+- `saved_recipes`
+- `weekly_plans`
+- `weekly_plan_days`
 
 ## Estrutura atual esperada
 
@@ -57,21 +58,21 @@ Painel administrativo isolado em `/admin`, integrado em modo somente leitura aos
 ### Plano Semanal
 
 - Fluxos visuais atuais: Automático e Personalizado.
-- Persistência local atual: array com 7 itens em `bistropet:weekly-plan`.
+- Persistência atual: `weekly_plans` e 7 registros relacionados em `weekly_plan_days`.
 - Cada item do plano contém `day`, `planMode`, `planModeLabel`, `title`, `ingredients`, `prep`, `note`, `image` e dados resumidos do perfil.
 
 ### Histórico
 
-- `bistropet:manual-recipe-history` armazena receitas salvas manualmente.
+- `saved_recipes` armazena receitas salvas manualmente.
 - Cada receita salva contém nome da receita (`title`), tipo (`mode`), data (`createdAt`) e modo de preparo (`steps`).
 
 ## Limitações preservadas
 
-- Não possui autenticação real.
-- Não possui banco de dados.
+- Utiliza autenticação real do Supabase.
+- Utiliza o banco de dados Supabase com RLS.
 - Não possui APIs administrativas.
-- Não possui dados de usuários cadastrados.
+- Não possui acesso global a outros usuários; cada sessão vê somente seus próprios dados.
 - Não coleta logs ou erros.
-- Não altera, remove ou migra chaves existentes do `localStorage`.
+- Não utiliza `localStorage` como fonte de dados.
 - Não modifica arquivos ou comportamentos da área do usuário.
 - O botão `Atualizar leitura` apenas recarrega as leituras atuais.

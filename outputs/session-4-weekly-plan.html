@@ -86,9 +86,16 @@
         </div>
       </section>
     </main>
-	    <script src="./bistropet-storage.js?v=manual-blocked-removal-final"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
+	    <script src="./bistropet-supabase.js"></script>
+	    <script src="./bistropet-storage.js?v=supabase-weekly-plan"></script>
 	    <script src="./bistropet-accessibility.js?v=tts-weekly-selected-day"></script>
     <script>
+      (async function () {
+      if (!await window.BistroPetStorage.ready()) {
+        window.location.replace("./index.html");
+        return;
+      }
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
       const createWeekPlanButton = document.getElementById("createWeekPlan");
@@ -644,13 +651,7 @@
       }
 
       function imageClientId() {
-        const key = "bistropet:image-client-id";
-        let value = window.localStorage.getItem(key);
-        if (!value) {
-          value = `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          window.localStorage.setItem(key, value);
-        }
-        return value;
+        return window.BistroPetStorage.getCurrentUser()?.id || "authenticated-user";
       }
 
       async function generateWeeklyPlanImages(plan) {
@@ -677,18 +678,18 @@
             }
           });
           renderProfileWeeklyPlan(currentPlan);
-          if (window.BistroPetStorage) window.BistroPetStorage.saveWeeklyPlan(currentPlan);
+          if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
         } catch (error) {}
       }
 
-	      function clearWeeklyPlanState() {
+	      async function clearWeeklyPlanState(persist = true) {
 	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
         currentPlan = [];
         activeDayIndex = null;
         weeklyDays.innerHTML = "";
         weeklyPlanner.classList.remove("is-generated");
         if (window.BistroPetStorage && window.BistroPetStorage.saveWeeklyPlan) {
-          window.BistroPetStorage.saveWeeklyPlan(null);
+          if (persist) await window.BistroPetStorage.saveWeeklyPlan(null);
         }
       }
 
@@ -734,9 +735,6 @@
 	          });
 	        });
         weeklyPlanner.classList.add("is-generated");
-        if (window.BistroPetStorage && window.BistroPetStorage.saveWeeklyPlan) {
-          window.BistroPetStorage.saveWeeklyPlan(currentPlan);
-        }
       }
 
       function refreshProfileCopy(profile) {
@@ -747,11 +745,11 @@
         document.querySelector(".weekly-result-card h2").textContent = `Plano semanal ${article} ${name}`;
       }
 
-      function updateModeState() {
+      async function updateModeState() {
         const customMode = document.getElementById("weeklyCustom").checked;
         const nextMode = customMode ? "custom" : "auto";
         if (activeWeeklyMode !== nextMode) {
-          clearWeeklyPlanState();
+          await clearWeeklyPlanState();
         }
         activeWeeklyMode = nextMode;
         weeklyPlanner.classList.toggle("is-custom-mode", customMode);
@@ -766,22 +764,33 @@
         });
       }
 
-      function generateProfileWeeklyPlan() {
+      async function generateProfileWeeklyPlan() {
         const profile = window.BistroPetStorage.getPetProfile();
-        clearWeeklyPlanState();
+        await clearWeeklyPlanState(false);
         const plan = buildWeeklyPlan(profile);
         activeDayIndex = null;
         renderProfileWeeklyPlan(plan);
+        await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
         generateWeeklyPlanImages(plan);
       }
 
       const savedProfile = window.BistroPetStorage.getPetProfile();
       refreshProfileCopy(savedProfile);
-      clearWeeklyPlanState();
-      updateModeState();
-      document.getElementById("weeklyAuto").addEventListener("change", updateModeState);
-      document.getElementById("weeklyCustom").addEventListener("change", updateModeState);
-	      createWeekPlanButton.addEventListener("click", generateProfileWeeklyPlan);
+      const savedPlan = window.BistroPetStorage.getWeeklyPlan();
+      if (isSavedPlanValid(savedPlan, savedProfile)) {
+        const customSavedPlan = savedPlan[0]?.planMode === "custom";
+        document.getElementById("weeklyCustom").checked = customSavedPlan;
+        document.getElementById("weeklyAuto").checked = !customSavedPlan;
+        activeWeeklyMode = customSavedPlan ? "custom" : "auto";
+        weeklyPlanner.classList.toggle("is-custom-mode", customSavedPlan);
+        renderProfileWeeklyPlan(savedPlan);
+      } else {
+        await clearWeeklyPlanState(false);
+        await updateModeState();
+      }
+      document.getElementById("weeklyAuto").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
+      document.getElementById("weeklyCustom").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
+	      createWeekPlanButton.addEventListener("click", () => generateProfileWeeklyPlan().catch(error => alert(error.message || "Não foi possível salvar o plano.")));
 	      document.getElementById("listenWeeklyPlan").addEventListener("click", () => {
 	        if (activeDayIndex !== null && currentPlan[activeDayIndex] && window.BistroPetAccessibility) {
 	          window.BistroPetAccessibility.speakWeeklyDay(currentPlan[activeDayIndex]);
@@ -790,6 +799,7 @@
 	      document.getElementById("stopWeeklyAudio").addEventListener("click", () => {
 	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
 	      });
+      })().catch(error => alert(error.message || "Não foi possível carregar o plano semanal."));
     </script>
   </body>
 </html>

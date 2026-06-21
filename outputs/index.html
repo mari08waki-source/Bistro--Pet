@@ -47,11 +47,11 @@
               <p>Entrar na experiência</p>
               <label>
                 Email
-                <input value="tutora@bistropet.app" autocomplete="email" />
+                <input id="authEmail" type="email" autocomplete="email" />
               </label>
               <label>
                 Senha
-                <input type="password" value="premium" autocomplete="current-password" />
+                <input id="authPassword" type="password" autocomplete="current-password" />
               </label>
               <div class="auth-links" aria-label="Ações de acesso">
                 <button type="button" id="signupButton">Cadastro</button>
@@ -73,7 +73,9 @@
         </section>
       </main>
     </div>
-	    <script src="./bistropet-storage.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
+    <script src="./bistropet-supabase.js"></script>
+    <script src="./bistropet-storage.js"></script>
 	    <script src="./bistropet-accessibility.js"></script>
     <script>
       const createProfileButton = document.getElementById("createProfile");
@@ -81,13 +83,33 @@
       const forgotPasswordButton = document.getElementById("forgotPasswordButton");
       const acceptTerms = document.getElementById("acceptTerms");
       const acceptPrivacy = document.getElementById("acceptPrivacy");
+      const authEmail = document.getElementById("authEmail");
+      const authPassword = document.getElementById("authPassword");
+      let recoveryMode = /(?:#|[?&])type=recovery(?:&|$)/.test(window.location.href);
+      let authBusy = false;
 
       function updateConsentState() {
         createProfileButton.disabled = !(acceptTerms.checked && acceptPrivacy.checked);
       }
 
+      function credentials() {
+        return {
+          email: authEmail.value.trim(),
+          password: authPassword.value
+        };
+      }
+
+      function validateCredentials(requirePassword = true) {
+        const value = credentials();
+        if (!value.email || (requirePassword && !value.password)) {
+          alert("Preencha o email e a senha.");
+          return null;
+        }
+        return value;
+      }
+
       function openProfileCreation() {
-        if (createProfileButton.disabled) {
+        if (!(acceptTerms.checked && acceptPrivacy.checked)) {
           alert("Para criar o cadastro, aceite os Termos de Uso e a Politica de Privacidade.");
           acceptTerms.focus();
           return;
@@ -95,13 +117,63 @@
         window.location.href = "./session-2-pet-profile.html";
       }
 
+      async function runAuth(action) {
+        if (authBusy) return;
+        authBusy = true;
+        createProfileButton.disabled = true;
+        signupButton.disabled = true;
+        forgotPasswordButton.disabled = true;
+        try {
+          await action();
+        } catch (error) {
+          alert(error.message || "Não foi possível concluir o acesso.");
+        } finally {
+          authBusy = false;
+          signupButton.disabled = false;
+          forgotPasswordButton.disabled = false;
+          updateConsentState();
+        }
+      }
+
       [acceptTerms, acceptPrivacy].forEach(input => input.addEventListener("change", updateConsentState));
 
-      createProfileButton.addEventListener("click", openProfileCreation);
-      signupButton.addEventListener("click", openProfileCreation);
-      forgotPasswordButton.addEventListener("click", () => {
-        alert("A recuperacao de senha sera ativada quando o login real for conectado. Nesta versao, o acesso demonstrativo nao armazena senha.");
-      });
+      createProfileButton.addEventListener("click", () => runAuth(async () => {
+        const value = validateCredentials();
+        if (!value) return;
+        if (recoveryMode) {
+          await window.BistroPetSupabase.updatePassword(value.password);
+          recoveryMode = false;
+          alert("Senha atualizada.");
+          return;
+        }
+        await window.BistroPetSupabase.signIn(value.email, value.password);
+        openProfileCreation();
+      }));
+      signupButton.addEventListener("click", () => runAuth(async () => {
+        if (!(acceptTerms.checked && acceptPrivacy.checked)) {
+          alert("Para criar o cadastro, aceite os Termos de Uso e a Politica de Privacidade.");
+          return;
+        }
+        const value = validateCredentials();
+        if (!value) return;
+        const acceptedAt = new Date().toISOString();
+        const result = await window.BistroPetSupabase.signUp(value.email, value.password, {
+          terms_accepted_at: acceptedAt,
+          privacy_accepted_at: acceptedAt
+        });
+        if (result.session) openProfileCreation();
+        else alert("Cadastro criado. Confirme seu email para entrar.");
+      }));
+      forgotPasswordButton.addEventListener("click", () => runAuth(async () => {
+        const value = validateCredentials(false);
+        if (!value) return;
+        await window.BistroPetSupabase.sendPasswordRecovery(value.email);
+        alert("Enviamos as instruções de recuperação para o seu email.");
+      }));
+
+      window.BistroPetSupabase.onAuthStateChange(event => {
+        if (event === "PASSWORD_RECOVERY") recoveryMode = true;
+      }).catch(error => alert(error.message || "Supabase indisponível."));
     </script>
   </body>
 </html>

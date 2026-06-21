@@ -13,8 +13,8 @@
       <p class="eyebrow">Área administrativa</p>
       <h1>Gestão administrativa do Bistrô.</h1>
       <p class="muted">Visão compacta e somente leitura dos dados locais.</p>
-      <label>Email administrativo<input type="email" placeholder="admin@bistropet.app" autocomplete="off" /></label>
-      <label>Senha<input type="password" placeholder="••••••••" autocomplete="off" /></label>
+      <label>Email administrativo<input id="adminEmail" type="email" placeholder="admin@bistropet.app" autocomplete="email" /></label>
+      <label>Senha<input id="adminPassword" type="password" placeholder="••••••••" autocomplete="current-password" /></label>
       <button class="primary" type="button" id="previewAdmin">Visualizar estrutura</button>
     </section>
   </main>
@@ -68,6 +68,9 @@
       <div id="detailContent"></div>
     </section>
   </div>
-  <script src="./admin.js?v=production-view"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
+  <script src="../bistropet-supabase.js"></script>
+  <script src="../bistropet-storage.js?v=supabase-admin"></script>
+  <script src="./admin.js?v=supabase-view"></script>
 </body>
 </html>
