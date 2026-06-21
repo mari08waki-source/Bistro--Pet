@@ -32,6 +32,8 @@
 	      #weeklyPlanner .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
 	      #weeklyPlanner .ingredient-list li { display: block; width: 100%; }
       .weekly-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .weekly-heading-actions { display: inline-flex; align-items: center; gap: 8px; }
+      .weekly-profile-link { display: inline-flex; align-items: center; text-decoration: none; }
       .weekly-back { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--sage-dark); cursor: pointer; padding: 4px; font-size: 20px; line-height: 1; text-decoration: none; }
     </style>
   </head>
@@ -48,7 +50,10 @@
       <section class="bistro-menu weekly-heading">
         <div class="weekly-heading-row">
           <p class="meal-eyebrow">Menu Bistro</p>
-          <a class="weekly-back" href="./session-3-meal.html" aria-label="Voltar para receitas" title="Voltar para receitas">&larr;</a>
+          <div class="weekly-heading-actions">
+            <a class="audio-button weekly-profile-link" href="./session-2-pet-profile.html?edit=1">Perfil do Pet</a>
+            <a class="weekly-back" href="./session-3-meal.html" aria-label="Voltar para receitas" title="Voltar para receitas">&larr;</a>
+          </div>
         </div>
         <h1>O chef vai organizar a semana da Luna.</h1>
       </section>
