@@ -61,6 +61,7 @@
     const { data, error } = await client.auth.getUser();
     if (error && error.name !== "AuthSessionMissingError") throw error;
     currentUser = data?.user || null;
+    if (currentUser) mountSessionLogout();
     return currentUser;
   }
 
@@ -77,11 +78,17 @@
     const client = await ready();
     const redirectTo = `${window.location.origin}/index.html`;
     const { data, error } = await client.auth.signUp({
-      email,
+      email: String(email || "").trim().toLowerCase(),
       password,
       options: { emailRedirectTo: redirectTo, data: metadata }
     });
     if (error) throw error;
+    if (!data?.user) {
+      throw new Error("O Supabase não confirmou a criação do cadastro.");
+    }
+    if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw new Error("Este email já possui cadastro. Entre com a senha ou recupere o acesso.");
+    }
     currentUser = data.user || null;
     return data;
   }
@@ -119,6 +126,36 @@
   async function onAuthStateChange(callback) {
     const client = await ready();
     return client.auth.onAuthStateChange(callback);
+  }
+
+  function mountSessionLogout() {
+    if (document.getElementById("openLogout") || document.getElementById("bistropetSessionLogout")) return;
+    if (!document.body.matches(".session-two-body, .session-three-body")) return;
+
+    const button = document.createElement("button");
+    button.id = "bistropetSessionLogout";
+    button.className = "bistropet-session-logout";
+    button.type = "button";
+    button.setAttribute("aria-label", "Sair da conta");
+    button.title = "Sair da conta";
+    button.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 5H5v14h5"></path>
+        <path d="M13 8l4 4-4 4"></path>
+        <path d="M8 12h9"></path>
+      </svg>`;
+    button.addEventListener("click", async () => {
+      if (!window.confirm("Deseja sair da conta?")) return;
+      button.disabled = true;
+      try {
+        await signOut();
+        window.location.replace("./index.html");
+      } catch (error) {
+        button.disabled = false;
+        window.alert(error.message || "Não foi possível sair da conta.");
+      }
+    });
+    document.body.appendChild(button);
   }
 
   window.BistroPetSupabase = {

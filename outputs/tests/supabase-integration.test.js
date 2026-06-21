@@ -19,11 +19,22 @@ test("frontend integration contains every BistroPet Supabase table", () => {
 test("authentication implements signup, login, recovery and session isolation", () => {
   const client = read("bistropet-supabase.js");
   assert.match(client, /signUp\(/);
+  assert.match(client, /data\.user\.identities/);
+  assert.match(client, /identities\.length === 0/);
   assert.match(client, /signInWithPassword/);
   assert.match(client, /resetPasswordForEmail/);
   assert.match(client, /updateUser\(\{ password \}\)/);
   assert.match(client, /storage: authStorage\(\)/);
   assert.doesNotMatch(client, /service_role|SERVICE_ROLE/);
+});
+
+test("authenticated screens mount a shared logout control", () => {
+  const client = read("bistropet-supabase.js");
+  const styles = read("styles.css");
+  assert.match(client, /mountSessionLogout\(\)/);
+  assert.match(client, /\.session-two-body, \.session-three-body/);
+  assert.match(client, /await signOut\(\)/);
+  assert.match(styles, /\.bistropet-session-logout/);
 });
 
 test("active frontend no longer uses localStorage", () => {

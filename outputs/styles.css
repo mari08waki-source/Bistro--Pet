@@ -412,6 +412,34 @@ h3 {
   background: var(--off);
 }
 
+.bistropet-session-logout {
+  position: fixed;
+  z-index: 60;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 253, 248, 0.58);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.9);
+  color: var(--sage-dark);
+  box-shadow: 0 8px 24px rgba(22, 27, 21, 0.14);
+  cursor: pointer;
+}
+
+.bistropet-session-logout svg {
+  width: 18px;
+  height: 18px;
+}
+
+.bistropet-session-logout:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
 .profile-session {
   width: 100%;
   min-height: 100vh;
