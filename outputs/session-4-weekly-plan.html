@@ -31,30 +31,40 @@
 	      #weeklyPlanner:not(.is-generated) .weekly-audio-actions { display: none; }
 	      #weeklyPlanner .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
 	      #weeklyPlanner .ingredient-list li { display: block; width: 100%; }
-      .weekly-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-      .weekly-heading-actions { display: inline-flex; align-items: center; gap: 8px; }
-      .weekly-profile-link { display: inline-flex; align-items: center; text-decoration: none; }
-      .weekly-back { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--sage-dark); cursor: pointer; padding: 4px; font-size: 20px; line-height: 1; text-decoration: none; }
+      .weekly-user-card { grid-template-columns: 72px 1fr auto; }
+      .weekly-logout { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--sage-dark); cursor: pointer; }
+      .weekly-logout svg { width: 17px; height: 17px; }
+      .profile-edit-card { min-height: 44px; display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 253, 248, 0.78); color: var(--sage-dark); text-decoration: none; }
+      .profile-edit-card svg { width: 18px; height: 18px; }
+      .profile-edit-card strong { font-size: 12px; }
+      .profile-edit-arrow { font-size: 20px; line-height: 1; }
+      .logout-dialog { width: min(calc(100vw - 32px), 330px); padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 253, 248, 0.98); color: var(--ink); box-shadow: 0 28px 70px rgba(22, 27, 21, 0.28); }
+      .logout-dialog::backdrop { background: rgba(31, 37, 29, 0.46); }
+      .logout-dialog p { margin: 0 0 18px; text-align: center; }
+      .logout-actions { display: flex; justify-content: flex-end; gap: 10px; }
+      .logout-actions .primary,
+      .logout-actions .secondary { min-height: 40px; }
     </style>
   </head>
   <body class="session-three-body">
     <main class="meal-session bistro-generator">
-      <section class="chef-pet-card">
+      <section class="chef-pet-card weekly-user-card">
         <img src="./session-3-chef-akita.png" alt="Akita chef do Bistro Pet" />
         <div>
           <strong>Luna</strong>
           <span>Menu preparado pelo Bistro</span>
         </div>
+        <button class="weekly-logout" id="openLogout" type="button" aria-label="Sair da conta" title="Sair da conta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 5H5v14h5" />
+            <path d="M13 8l4 4-4 4" />
+            <path d="M8 12h9" />
+          </svg>
+        </button>
       </section>
 
       <section class="bistro-menu weekly-heading">
-        <div class="weekly-heading-row">
-          <p class="meal-eyebrow">Menu Bistro</p>
-          <div class="weekly-heading-actions">
-            <a class="audio-button weekly-profile-link" href="./session-2-pet-profile.html?edit=1">Perfil do Pet</a>
-            <a class="weekly-back" href="./session-3-meal.html" aria-label="Voltar para receitas" title="Voltar para receitas">&larr;</a>
-          </div>
-        </div>
+        <p class="meal-eyebrow">Menu Bistro</p>
         <h1>O chef vai organizar a semana da Luna.</h1>
       </section>
 
@@ -75,6 +85,14 @@
           </div>
 
           <button class="primary full create-week-plan" type="button" id="createWeekPlan">Criar plano da semana</button>
+          <a class="profile-edit-card" href="./session-2-pet-profile.html?edit=1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="3" />
+              <path d="M5.5 19c.8-3.2 3-5 6.5-5s5.7 1.8 6.5 5" />
+            </svg>
+            <strong>Editar Perfil</strong>
+            <span class="profile-edit-arrow" aria-hidden="true">&rsaquo;</span>
+          </a>
         </div>
 
         <div class="weekly-kitchen-stage">
@@ -97,6 +115,13 @@
       </section>
 
     </main>
+    <dialog class="logout-dialog" id="logoutDialog" aria-labelledby="logoutQuestion">
+      <p id="logoutQuestion">Deseja sair da conta?</p>
+      <div class="logout-actions">
+        <button class="secondary" id="cancelLogout" type="button">Cancelar</button>
+        <button class="primary" id="confirmLogout" type="button">Sair</button>
+      </div>
+    </dialog>
 	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
 	    <script src="./bistropet-supabase.js"></script>
 	    <script src="./bistropet-storage.js?v=supabase-weekly-plan"></script>
@@ -110,6 +135,8 @@
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
       const createWeekPlanButton = document.getElementById("createWeekPlan");
+      const logoutDialog = document.getElementById("logoutDialog");
+      const confirmLogoutButton = document.getElementById("confirmLogout");
       const customIngredients = [];
       const customBlockedIngredients = [];
       let currentPlan = [];
@@ -810,6 +837,18 @@
 	      document.getElementById("stopWeeklyAudio").addEventListener("click", () => {
 	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
 	      });
+      document.getElementById("openLogout").addEventListener("click", () => logoutDialog.showModal());
+      document.getElementById("cancelLogout").addEventListener("click", () => logoutDialog.close());
+      confirmLogoutButton.addEventListener("click", async () => {
+        try {
+          confirmLogoutButton.disabled = true;
+          await window.BistroPetSupabase.signOut();
+          window.location.replace("./index.html");
+        } catch (error) {
+          confirmLogoutButton.disabled = false;
+          alert(error.message || "Não foi possível sair da conta.");
+        }
+      });
       })().catch(error => alert(error.message || "Não foi possível carregar o plano semanal."));
     </script>
   </body>
