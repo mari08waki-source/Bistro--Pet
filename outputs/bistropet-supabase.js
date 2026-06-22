@@ -118,9 +118,24 @@
 
   async function signOut() {
     const client = await ready();
-    const { error } = await client.auth.signOut();
-    if (error) throw error;
-    currentUser = null;
+    const timeout = new Promise(resolve => {
+      window.setTimeout(() => resolve({ timedOut: true }), 4000);
+    });
+
+    try {
+      const result = await Promise.race([
+        client.auth.signOut({ scope: "local" }),
+        timeout
+      ]);
+      if (!result?.timedOut && result?.error) throw result.error;
+    } finally {
+      currentUser = null;
+      try {
+        Object.keys(window.sessionStorage)
+          .filter(key => /^sb-.*-auth-token(?:-code-verifier)?$/.test(key))
+          .forEach(key => window.sessionStorage.removeItem(key));
+      } catch (error) {}
+    }
   }
 
   async function onAuthStateChange(callback) {

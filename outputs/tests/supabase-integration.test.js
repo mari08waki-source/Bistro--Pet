@@ -37,6 +37,14 @@ test("authenticated screens mount a shared logout control", () => {
   assert.match(styles, /\.bistropet-session-logout/);
 });
 
+test("logout is local and cannot freeze indefinitely", () => {
+  const client = read("bistropet-supabase.js");
+  assert.match(client, /signOut\(\{ scope: \"local\" \}\)/);
+  assert.match(client, /Promise\.race/);
+  assert.match(client, /timedOut: true/);
+  assert.match(client, /window\.sessionStorage\.removeItem/);
+});
+
 test("active frontend no longer uses localStorage", () => {
   [
     "index.html",
