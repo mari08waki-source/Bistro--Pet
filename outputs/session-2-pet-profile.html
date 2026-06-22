@@ -96,47 +96,6 @@
 	      const customProfile = document.getElementById("customProfile");
       const isEditingProfile = new URLSearchParams(window.location.search).get("edit") === "1";
       let saveTimer;
-      const observationFoodWords = [
-        "mandioquinha", "beterraba", "abobrinha", "mandioca", "cenoura", "batata", "frango",
-        "chuchu", "carne", "peixe", "tilapia", "salmao", "arroz", "milho", "inhame",
-        "pepino", "vagem", "couve", "selga", "quinoa", "aveia", "abobora", "peru", "ovo"
-      ];
-      const observationFoodAliases = { cenora: "cenoura" };
-
-      function splitJoinedFoodWord(value) {
-        const clean = String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        if (!clean || !/^[a-z]+$/.test(clean)) return "";
-        const parts = [];
-        let remaining = clean;
-        while (remaining) {
-          const match = observationFoodWords.find(item => remaining.startsWith(item));
-          if (!match) return "";
-          parts.push(match);
-          remaining = remaining.slice(match.length);
-        }
-        return parts.length > 1 ? parts.join("\n") : "";
-      }
-
-      function normalizeObservationSeparators(value) {
-        return String(value || "")
-          .replace(/[\u200B-\u200D\u2060\uFEFF]+/g, "\n")
-          .replace(/\u00A0/g, " ")
-          .replace(/\s*[,;]\s*/g, "\n")
-          .replace(/\n[ \t]+|[ \t]+\n/g, "\n")
-          .replace(/\n{2,}/g, "\n")
-          .split("\n")
-          .map(item => splitJoinedFoodWord(item.trim()) || item)
-          .flatMap(item => {
-            const words = String(item || "").trim().split(/\s+/).filter(Boolean);
-            const normalizedWords = words.map(word => word.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
-            const knownWords = normalizedWords.map(word => observationFoodAliases[word] || word);
-            return words.length > 1 && knownWords.every(word => observationFoodWords.includes(word))
-              ? knownWords
-              : [words.length === 1 ? (observationFoodAliases[normalizedWords[0]] || item) : item];
-          })
-          .join("\n");
-      }
-
       function syncProfileModeFields() {
         observationCard.hidden = !customProfile.checked;
         if (!customProfile.checked) observationField.value = "";
@@ -162,13 +121,12 @@
           age: String(data.get("age") || "").trim(),
           weight: String(data.get("weight") || "").trim(),
           menuStyle: customProfile.checked ? "personalizada" : "padrao",
-          notes: customProfile.checked ? normalizeObservationSeparators(data.get("notes")).trim() : ""
+          notes: customProfile.checked ? String(data.get("notes") || "").trim() : ""
         };
       }
 
       async function savePetProfile() {
         const savedProfile = await window.BistroPetStorage.savePetProfile(collectPetProfileForm());
-        observationField.value = savedProfile.notes || "";
         return savedProfile;
       }
 
@@ -194,15 +152,6 @@
 	        syncProfileModeFields();
 	        scheduleProfileSave();
 	      });
-      observationField.addEventListener("input", () => {
-        const original = observationField.value;
-        const normalized = normalizeObservationSeparators(original);
-        if (normalized === original) return;
-        const cursor = observationField.selectionStart;
-        const normalizedCursor = normalizeObservationSeparators(original.slice(0, cursor)).length;
-        observationField.value = normalized;
-        observationField.setSelectionRange(normalizedCursor, normalizedCursor);
-      });
       const autoAdvanceFields = [
         { name: "tutor", next: "name", minimumLength: 2 },
         { name: "name", next: "age", minimumLength: 2 },

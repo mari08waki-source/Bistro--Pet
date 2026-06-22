@@ -26,6 +26,13 @@ test("profile observations split known foods separated only by spaces", () => {
   assert.match(read("bistropet-storage.js"), /parsedProfileRestrictions\.length \? parsedProfileRestrictions : storedOfficialRestrictions/);
 });
 
+test("profile textarea is not rewritten while the user is typing", () => {
+  const profile = read("session-2-pet-profile.html");
+  assert.doesNotMatch(profile, /observationField\.value = savedProfile\.notes/);
+  assert.doesNotMatch(profile, /observationField\.addEventListener\("input"/);
+  assert.match(profile, /notes: customProfile\.checked \? String\(data\.get\("notes"\)/);
+});
+
 test("authentication implements signup, login, recovery and session isolation", () => {
   const client = read("bistropet-supabase.js");
   assert.match(client, /signUp\(/);

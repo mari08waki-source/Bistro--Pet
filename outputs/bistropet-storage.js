@@ -114,7 +114,7 @@
       revision: Number(source.revision || 0),
       updatedAt: String(source.updatedAt || "")
     };
-    profile.notes = profile.menuStyle === "personalizada" ? normalizeObservationText(profile.notes) : "";
+    profile.notes = profile.menuStyle === "personalizada" ? String(profile.notes || "").trim() : "";
     return profile;
   }
 
