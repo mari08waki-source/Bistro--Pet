@@ -8,6 +8,8 @@ const javascriptFiles = [
   "bistropet-supabase.js",
   "bistropet-storage.js",
   "bistropet-accessibility.js",
+  "pwa.js",
+  "service-worker.js",
   "admin/admin.js",
   "api/supabase-config.js",
   "api/generate-recipe-image.js"

@@ -1,0 +1,42 @@
+{
+  "id": "/",
+  "name": "BistroPet",
+  "short_name": "BistroPet",
+  "description": "Cuidado diário e refeições personalizadas para pets.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "theme_color": "#0b0906",
+  "background_color": "#0b0906",
+  "categories": ["lifestyle", "food", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/bistropet-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/bistropet-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/bistropet-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/bistropet-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
