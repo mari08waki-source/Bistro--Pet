@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import vm from "node:vm";
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -14,6 +15,14 @@ test("frontend integration contains every BistroPet Supabase table", () => {
     "weekly_plans",
     "weekly_plan_days"
   ].forEach(table => assert.match(storage, new RegExp(`from\\(\\\"${table}\\\"\\)`)));
+});
+
+test("profile observations split known foods separated only by spaces", () => {
+  const context = { window: { addEventListener() {} } };
+  vm.runInNewContext(read("bistropet-storage.js"), context);
+  const restrictions = context.window.BistroPetStorage.extractFoodRestrictions("cenora carne");
+  assert.deepEqual([...restrictions, "peixe"], ["cenoura", "carne", "peixe"]);
+  assert.deepEqual([...context.window.BistroPetStorage.extractFoodRestrictions("batata doce")], ["batata doce"]);
 });
 
 test("authentication implements signup, login, recovery and session isolation", () => {

@@ -70,6 +70,23 @@
     return result;
   }
 
+  const observationFoodAliases = {
+    mandioquinha: "mandioquinha", beterraba: "beterraba", abobrinha: "abobrinha",
+    mandioca: "mandioca", cenora: "cenoura", cenoura: "cenoura", batata: "batata",
+    frango: "frango", chuchu: "chuchu", carne: "carne", peixe: "peixe",
+    tilapia: "tilapia", salmao: "salmao", arroz: "arroz", milho: "milho",
+    inhame: "inhame", pepino: "pepino", vagem: "vagem", couve: "couve",
+    selga: "selga", acelga: "acelga", quinoa: "quinoa", aveia: "aveia",
+    abobora: "abobora", peru: "peru", ovo: "ovo"
+  };
+
+  function splitKnownFoodWords(value) {
+    const original = String(value || "").trim();
+    const words = normalize(original).split(/\s+/).filter(Boolean);
+    if (words.length < 2 || !words.every(word => observationFoodAliases[word])) return [original];
+    return words.map(word => observationFoodAliases[word]);
+  }
+
   function extractFoodRestrictions(value) {
     const removeInstruction = item => String(item || "")
       .replace(/^.*?\b(?:n[aã]o pode comer|n[aã]o utilizar|al[eé]rgico a|restri[cç][aã]o a)\b\s*/i, "")
@@ -77,6 +94,8 @@
     return uniqueItems(normalizeObservationText(value)
       .split(/[,.;\n]/)
       .flatMap(item => removeInstruction(item).split(/\s+e\s+/i))
+      .flatMap(splitKnownFoodWords)
+      .map(item => observationFoodAliases[normalize(item)] || item)
       .map(item => item.trim())
       .filter(Boolean));
   }
