@@ -9,9 +9,7 @@ const validGenerationTypes = new Set(["customRecipe", "chefSuggestion", "weeklyP
 
 function sendJson(res, response, status = 200) {
   res.setHeader("Content-Type", "application/json");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   res.status(status).json(response);
 }
 
@@ -40,6 +38,7 @@ export default async function handler(request, response) {
     if (!validGenerationTypes.has(generationType)) {
       return sendJson(response, { error: "Invalid image generation type." }, 400);
     }
+    const clientId = await identifyImageClient(request);
     if (!["live", "validate"].includes(process.env.IMAGE_GENERATION_MODE)) {
       return sendJson(response, {
         status: "disabled",
@@ -47,7 +46,6 @@ export default async function handler(request, response) {
         images: []
       }, 503);
     }
-    const clientId = identifyImageClient(request, response);
     const recipes = (Array.isArray(body.recipes) ? body.recipes : [body.recipe]).filter(Boolean).map(normalizeRecipe);
 
     if (!recipes.length) return sendJson(response, { error: "No recipe provided." }, 400);
@@ -129,6 +127,12 @@ export default async function handler(request, response) {
       return sendJson(response, { status: "ready", images: results, limit });
     });
   } catch (error) {
+    if (error.code === "AUTH_REQUIRED") {
+      return sendJson(response, {
+        status: "unauthorized",
+        error: "Authentication required."
+      }, 401);
+    }
     if (error.code === "IMAGE_REQUEST_IN_PROGRESS") {
       return sendJson(response, {
         status: "request_in_progress",

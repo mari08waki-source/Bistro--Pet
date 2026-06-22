@@ -10,6 +10,13 @@ Painel administrativo isolado em `/admin`, autenticado pelo Supabase e limitado 
 
 ## Integração atual
 
+### Autorização administrativa
+
+- O painel exige uma sessão válida do Supabase e valida o token no backend em `/api/admin-access`.
+- Somente contas com `app_metadata.role` igual a `admin` recebem acesso.
+- `user_metadata` não concede permissão administrativa, pois pode ser alterado pelo próprio usuário.
+- A promoção de uma conta deve ser feita por um operador autorizado no Supabase; o aplicativo nunca promove usuários.
+
 - Funciona como Central Administrativa somente leitura para a sessão autenticada.
 - Exibe totais disponíveis de perfis, receitas salvas e planos semanais.
 - Exibe a última atividade quando existe uma data realmente armazenada.

@@ -118,8 +118,9 @@
 
   async function signOut() {
     const client = await ready();
+    let timeoutId;
     const timeout = new Promise(resolve => {
-      window.setTimeout(() => resolve({ timedOut: true }), 4000);
+      timeoutId = window.setTimeout(() => resolve({ timedOut: true }), 4000);
     });
 
     try {
@@ -129,13 +130,45 @@
       ]);
       if (!result?.timedOut && result?.error) throw result.error;
     } finally {
+      window.clearTimeout(timeoutId);
       currentUser = null;
       try {
         Object.keys(window.sessionStorage)
           .filter(key => /^sb-.*-auth-token(?:-code-verifier)?$/.test(key))
           .forEach(key => window.sessionStorage.removeItem(key));
       } catch (error) {}
+      window.dispatchEvent(new CustomEvent("bistropet:session-cleared"));
     }
+  }
+
+  async function adminAccess() {
+    const client = await ready();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const session = data?.session;
+    if (!session?.access_token) return false;
+
+    const response = await fetch("/api/admin-access", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${session.access_token}`
+      },
+      cache: "no-store"
+    });
+    if (response.status === 401 || response.status === 403) return false;
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Não foi possível validar o acesso administrativo.");
+    return result.allowed === true;
+  }
+
+  async function authHeaders(headers = {}) {
+    const client = await ready();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const token = data?.session?.access_token;
+    if (!token) throw new Error("Sessão não autenticada.");
+    return { ...headers, Authorization: `Bearer ${token}` };
   }
 
   async function onAuthStateChange(callback) {
@@ -184,6 +217,8 @@
     sendPasswordRecovery,
     updatePassword,
     signOut,
+    adminAccess,
+    authHeaders,
     onAuthStateChange
   };
 })();

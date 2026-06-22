@@ -16,30 +16,30 @@ function responseStub() {
   };
 }
 
-test("server ignores body identity and issues a signed HttpOnly cookie", () => {
-  process.env.IMAGE_CLIENT_SECRET = "test-secret-with-at-least-thirty-two-characters";
-  const response = responseStub();
-  const clientId = identifyImageClient({ headers: {}, body: { clientId: "manipulated" } }, response);
-  const cookie = response.headers.get("set-cookie");
-  assert.match(clientId, /^[a-f0-9-]{36}$/i);
-  assert.match(cookie, /^bistropet_image_client=/);
-  assert.match(cookie, /HttpOnly/);
-  assert.doesNotMatch(cookie, /manipulated/);
+test("image client identity comes from the authenticated Supabase user", async () => {
+  process.env.SUPABASE_URL = "https://bistropet.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "public-anon-key";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ id: "authenticated-user-id" }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
+  try {
+    const clientId = await identifyImageClient({
+      headers: { authorization: "Bearer valid-token" },
+      body: { clientId: "manipulated" }
+    });
+    assert.equal(clientId, "authenticated-user-id");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
-test("signed client cookie is reused and tampering is rejected", () => {
-  process.env.IMAGE_CLIENT_SECRET = "test-secret-with-at-least-thirty-two-characters";
-  const firstResponse = responseStub();
-  const firstId = identifyImageClient({ headers: {} }, firstResponse);
-  const signedCookie = firstResponse.headers.get("set-cookie").split(";")[0];
-
-  const reusedId = identifyImageClient({ headers: { cookie: signedCookie } }, responseStub());
-  assert.equal(reusedId, firstId);
-
-  const tamperedResponse = responseStub();
-  const tamperedId = identifyImageClient({ headers: { cookie: `${signedCookie}x` } }, tamperedResponse);
-  assert.notEqual(tamperedId, firstId);
-  assert.ok(tamperedResponse.headers.get("set-cookie"));
+test("image client rejects requests without a Supabase session", async () => {
+  await assert.rejects(
+    identifyImageClient({ headers: {}, body: { clientId: "manipulated" } }),
+    error => error.code === "AUTH_REQUIRED"
+  );
 });
 
 test("simultaneous requests with the same lock key are rejected", async () => {
@@ -159,18 +159,33 @@ function handlerResponse() {
   };
 }
 
-async function callHandler({ generationType, cookie = "", recipes, recipe, clientId = "manipulated" }) {
+async function callHandler({ generationType, recipes, recipe, userId = "test-user" }) {
+  process.env.SUPABASE_URL = "https://bistropet.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "public-anon-key";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (String(url).endsWith("/auth/v1/user")) {
+      return new Response(JSON.stringify({ id: userId }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return originalFetch(url);
+  };
   const response = handlerResponse();
-  await handler({
-    method: "POST",
-    headers: { cookie },
-    body: { generationType, clientId, recipes, recipe }
-  }, response);
-  return response;
+  try {
+    await handler({
+      method: "POST",
+      headers: { authorization: "Bearer test-token" },
+      body: { generationType, recipes, recipe }
+    }, response);
+    return response;
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 }
 
 test("handler applies one daily request per individual generation type", async () => {
-  process.env.IMAGE_CLIENT_SECRET = "test-secret-with-at-least-thirty-two-characters";
   process.env.IMAGE_GENERATION_MODE = "validate";
   process.env.IMAGE_LIMIT_STORAGE = "memory";
   process.env.IMAGE_STORAGE_MODE = "memory";
@@ -180,14 +195,12 @@ test("handler applies one daily request per individual generation type", async (
     generationType: "customRecipe",
     recipe: { id: "free", recipeName: "Teste", ingredients: ["Arroz"] }
   });
-  const cookie = first.headers.get("set-cookie").split(";")[0];
   assert.equal(first.statusCode, 200);
   assert.equal(first.body.limit.remaining, 0);
 
   const second = await callHandler({
     generationType: "customRecipe",
-    cookie,
-    clientId: "a-different-manipulated-id",
+    userId: "test-user",
     recipe: { id: "free", recipeName: "Outro", ingredients: ["Batata"] }
   });
   assert.equal(second.statusCode, 429);
@@ -195,25 +208,22 @@ test("handler applies one daily request per individual generation type", async (
 });
 
 test("daily limits are independent for custom and chef requests", async () => {
-  process.env.IMAGE_CLIENT_SECRET = "independent-test-secret-with-at-least-thirty-two-characters";
   process.env.IMAGE_GENERATION_MODE = "validate";
   process.env.IMAGE_LIMIT_STORAGE = "memory";
   process.env.IMAGE_STORAGE_MODE = "memory";
   process.env.IMAGE_LOCK_STORAGE = "memory";
 
-  let cookie = "";
   for (const generationType of ["customRecipe", "chefSuggestion"]) {
     const first = await callHandler({
       generationType,
-      cookie,
+      userId: "independent-user",
       recipe: { id: generationType, recipeName: generationType, ingredients: ["Arroz"] }
     });
-    cookie ||= first.headers.get("set-cookie").split(";")[0];
     assert.equal(first.statusCode, 200);
 
     const second = await callHandler({
       generationType,
-      cookie,
+      userId: "independent-user",
       recipe: { id: generationType, recipeName: generationType, ingredients: ["Batata"] }
     });
     assert.equal(second.statusCode, 429);
@@ -221,7 +231,6 @@ test("daily limits are independent for custom and chef requests", async () => {
 });
 
 test("handler rejects invalid types and multi-recipe individual requests", async () => {
-  process.env.IMAGE_CLIENT_SECRET = "validation-test-secret-with-at-least-thirty-two-characters";
   const invalidType = await callHandler({
     generationType: "unlimited",
     recipe: { id: "x", ingredients: ["Arroz"] }
@@ -237,7 +246,6 @@ test("handler rejects invalid types and multi-recipe individual requests", async
 
 test("disabled endpoint refuses requests before using paid services", async () => {
   process.env.IMAGE_GENERATION_MODE = "disabled";
-  delete process.env.IMAGE_CLIENT_SECRET;
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
   const response = await callHandler({
@@ -248,8 +256,24 @@ test("disabled endpoint refuses requests before using paid services", async () =
   assert.equal(response.body.status, "disabled");
 });
 
+test("image endpoint rejects anonymous requests before any provider call", async () => {
+  process.env.IMAGE_GENERATION_MODE = "validate";
+  process.env.SUPABASE_URL = "https://bistropet.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "public-anon-key";
+  const response = handlerResponse();
+  await handler({
+    method: "POST",
+    headers: {},
+    body: {
+      generationType: "customRecipe",
+      recipe: { id: "anonymous", ingredients: ["Arroz"] }
+    }
+  }, response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.body.status, "unauthorized");
+});
+
 test("handler applies one weekly plan request per week and caps it at seven recipes", async () => {
-  process.env.IMAGE_CLIENT_SECRET = "another-test-secret-with-at-least-thirty-two-characters";
   process.env.IMAGE_GENERATION_MODE = "validate";
   process.env.IMAGE_LIMIT_STORAGE = "memory";
   process.env.IMAGE_STORAGE_MODE = "memory";
@@ -260,11 +284,10 @@ test("handler applies one weekly plan request per week and caps it at seven reci
     ingredients: ["Frango", `Arroz ${index}`, `Cenoura ${index}`]
   }));
   const first = await callHandler({ generationType: "weeklyPlan", recipes });
-  const cookie = first.headers.get("set-cookie").split(";")[0];
   assert.equal(first.statusCode, 200);
   assert.equal(first.body.images.length, 7);
 
-  const second = await callHandler({ generationType: "weeklyPlan", cookie, recipes });
+  const second = await callHandler({ generationType: "weeklyPlan", userId: "test-user", recipes });
   assert.equal(second.statusCode, 429);
 
   const oversized = await callHandler({

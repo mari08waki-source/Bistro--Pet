@@ -886,10 +886,6 @@
         return "chefSuggestion";
       }
 
-      function imageClientId() {
-        return window.BistroPetStorage.getCurrentUser()?.id || "authenticated-user";
-      }
-
       async function generateRecipeImage(recipe) {
         const photo = document.getElementById("mealPhoto");
         const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -901,10 +897,9 @@
         try {
           const response = await fetch(imageEndpoint, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: await window.BistroPetSupabase.authHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               generationType: generationTypeForMode(recipe.mode),
-              clientId: imageClientId(),
               recipe: {
                 id: recipe.mode,
                 requestId,

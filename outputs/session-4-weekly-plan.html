@@ -689,19 +689,14 @@
         }));
       }
 
-      function imageClientId() {
-        return window.BistroPetStorage.getCurrentUser()?.id || "authenticated-user";
-      }
-
       async function generateWeeklyPlanImages(plan) {
         if (!imageEndpoint || !plan.length) return;
         try {
           const response = await fetch(imageEndpoint, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: await window.BistroPetSupabase.authHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               generationType: "weeklyPlan",
-              clientId: imageClientId(),
               recipes: plan.map((item, index) => ({
                 id: String(index),
                 ingredients: item.ingredients

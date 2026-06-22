@@ -43,6 +43,22 @@ test("logout is local and cannot freeze indefinitely", () => {
   assert.match(client, /Promise\.race/);
   assert.match(client, /timedOut: true/);
   assert.match(client, /window\.sessionStorage\.removeItem/);
+  assert.match(client, /bistropet:session-cleared/);
+  assert.match(read("bistropet-storage.js"), /function clearSessionState\(\)/);
+});
+
+test("admin access is checked by the backend and common users are redirected", () => {
+  const client = read("bistropet-supabase.js");
+  const admin = read("admin/admin.js");
+  assert.match(client, /fetch\(\"\/api\/admin-access\"/);
+  assert.match(admin, /BistroPetSupabase\.adminAccess\(\)/);
+  assert.match(admin, /window\.location\.replace\(\"\.\.\/index\.html\"\)/);
+});
+
+test("terms describe real account storage and no demonstration access", () => {
+  const terms = read("terms.html");
+  assert.doesNotMatch(terms, /demonstrativo|armazenados localmente|autenticacao definitiva/i);
+  assert.match(terms, /infraestrutura do Bistro Pet/i);
 });
 
 test("active frontend no longer uses localStorage", () => {

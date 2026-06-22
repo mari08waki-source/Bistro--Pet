@@ -1,44 +1,28 @@
-import crypto from "node:crypto";
-
-const COOKIE_NAME = "bistropet_image_client";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-function cookieValue(request, name) {
-  const header = String(request.headers?.cookie || "");
-  const item = header.split(";").map(value => value.trim()).find(value => value.startsWith(`${name}=`));
-  return item ? decodeURIComponent(item.slice(name.length + 1)) : "";
+function authError(message = "Authentication required.") {
+  const error = new Error(message);
+  error.code = "AUTH_REQUIRED";
+  return error;
 }
 
-function signature(value, secret) {
-  return crypto.createHmac("sha256", secret).update(value).digest("base64url");
-}
+export async function identifyImageClient(request) {
+  const token = String(request.headers?.authorization || "").match(/^Bearer\s+(.+)$/i)?.[1];
+  const url = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+  const anonKey = String(
+    process.env.SUPABASE_ANON_KEY
+      || process.env.SUPABASE_PUBLISHABLE_KEY
+      || ""
+  ).trim();
+  if (!token || !/^https:\/\/[^/]+\.supabase\.co$/i.test(url) || !anonKey) throw authError();
 
-function validSignedId(value, secret) {
-  const [id, suppliedSignature] = String(value || "").split(".");
-  if (!id || !suppliedSignature || !/^[a-f0-9-]{36}$/i.test(id)) return "";
-  const expectedSignature = signature(id, secret);
-  const supplied = Buffer.from(suppliedSignature);
-  const expected = Buffer.from(expectedSignature);
-  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return "";
-  return id;
-}
-
-export function identifyImageClient(request, response) {
-  const secret = process.env.IMAGE_CLIENT_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("IMAGE_CLIENT_SECRET must contain at least 32 characters.");
-  }
-
-  const existingValue = cookieValue(request, COOKIE_NAME);
-  const existingId = validSignedId(existingValue, secret);
-  if (existingId) return existingId;
-
-  const id = crypto.randomUUID();
-  const signedValue = `${id}.${signature(id, secret)}`;
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  response.setHeader(
-    "Set-Cookie",
-    `${COOKIE_NAME}=${encodeURIComponent(signedValue)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}${secure}`
-  );
-  return id;
+  const response = await fetch(`${url}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`
+    },
+    cache: "no-store"
+  });
+  const user = await response.json().catch(() => ({}));
+  if (!response.ok || !user?.id) throw authError();
+  return user.id;
 }

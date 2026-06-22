@@ -181,6 +181,12 @@ async function enterAdmin() {
   if (!user) {
     if (!email || !password) throw new Error("Preencha o email e a senha.");
     await window.BistroPetSupabase.signIn(email, password);
+    user = await window.BistroPetSupabase.sessionUser();
+  }
+  if (!user || !await window.BistroPetSupabase.adminAccess()) {
+    await window.BistroPetSupabase.signOut().catch(() => {});
+    window.location.replace("../index.html");
+    return;
   }
   await window.BistroPetStorage.refresh();
   renderAdminData();
@@ -191,9 +197,8 @@ async function enterAdmin() {
 document.getElementById("previewAdmin").addEventListener("click", () => enterAdmin().catch(error => alert(error.message || "Não foi possível entrar.")));
 document.getElementById("refreshData").addEventListener("click", () => window.BistroPetStorage.refresh().then(renderAdminData).catch(error => alert(error.message)));
 document.getElementById("exitPreview").addEventListener("click", () => {
-  window.BistroPetSupabase.signOut().catch(() => {});
-  document.getElementById("adminApp").hidden = true;
-  document.getElementById("adminLogin").hidden = false;
+  window.BistroPetSupabase.signOut()
+    .finally(() => window.location.replace("../index.html"));
 });
 document.querySelectorAll("[data-module]").forEach(button => button.addEventListener("click", () => {
   const module = button.dataset.module;
@@ -210,3 +215,7 @@ document.getElementById("detailPanel").addEventListener("click", event => {
   if (event.target.id === "detailPanel") event.currentTarget.hidden = true;
 });
 document.getElementById("exportData").addEventListener("click", exportData);
+
+window.BistroPetSupabase.sessionUser()
+  .then(user => { if (user) return enterAdmin(); })
+  .catch(() => window.location.replace("../index.html"));

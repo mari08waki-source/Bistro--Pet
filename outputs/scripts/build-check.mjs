@@ -12,6 +12,7 @@ const javascriptFiles = [
   "service-worker.js",
   "admin/admin.js",
   "api/supabase-config.js",
+  "api/admin-access.js",
   "api/generate-recipe-image.js"
 ];
 const htmlFiles = [

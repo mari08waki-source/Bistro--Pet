@@ -28,6 +28,19 @@
   };
   let readyPromise;
 
+  function clearSessionState() {
+    cache.user = null;
+    cache.profileId = null;
+    cache.profile = { ...defaultProfile };
+    cache.hasProfile = false;
+    cache.officialRestrictions = [];
+    cache.globalBlockedIngredients = [];
+    cache.lastRecipe = null;
+    cache.recipeHistory = [];
+    cache.weeklyPlan = null;
+    readyPromise = undefined;
+  }
+
   function normalize(value) {
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   }
@@ -391,6 +404,9 @@
     saveWeeklyPlan,
     getGlobalBlockedIngredients,
     saveGlobalBlockedIngredients,
-    clearAllData
+    clearAllData,
+    clearSessionState
   };
+
+  window.addEventListener("bistropet:session-cleared", clearSessionState);
 })();
