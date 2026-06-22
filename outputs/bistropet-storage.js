@@ -213,7 +213,9 @@
     cache.hasProfile = Boolean(profileResult.data);
     cache.profileId = profileResult.data?.id || null;
     cache.profile = profileFromRow(profileResult.data);
-    cache.officialRestrictions = uniqueItems((blockedResult.data || []).filter(row => row.source === "profile_observation").map(row => row.ingredient_name));
+    const storedOfficialRestrictions = uniqueItems((blockedResult.data || []).filter(row => row.source === "profile_observation").map(row => row.ingredient_name));
+    const parsedProfileRestrictions = extractFoodRestrictions(cache.profile.notes);
+    cache.officialRestrictions = parsedProfileRestrictions.length ? parsedProfileRestrictions : storedOfficialRestrictions;
     cache.globalBlockedIngredients = uniqueItems((blockedResult.data || []).filter(row => row.source === "manual_recipe").map(row => row.ingredient_name));
     cache.lastRecipe = recipeFromGeneration(generationResult.data);
     cache.recipeHistory = (historyResult.data || []).map(recipeFromSaved);

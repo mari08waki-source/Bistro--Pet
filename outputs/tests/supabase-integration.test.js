@@ -23,6 +23,7 @@ test("profile observations split known foods separated only by spaces", () => {
   const restrictions = context.window.BistroPetStorage.extractFoodRestrictions("cenora carne");
   assert.deepEqual([...restrictions, "peixe"], ["cenoura", "carne", "peixe"]);
   assert.deepEqual([...context.window.BistroPetStorage.extractFoodRestrictions("batata doce")], ["batata doce"]);
+  assert.match(read("bistropet-storage.js"), /parsedProfileRestrictions\.length \? parsedProfileRestrictions : storedOfficialRestrictions/);
 });
 
 test("authentication implements signup, login, recovery and session isolation", () => {
