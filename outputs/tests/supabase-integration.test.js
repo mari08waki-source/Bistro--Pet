@@ -103,3 +103,23 @@ test("RLS remains enabled for all six application tables", () => {
   assert.equal((schema.match(/^create policy /gm) || []).length, 9);
   assert.match(schema, /auth\.uid\(\) = user_id/);
 });
+
+test("security hardening restricts all user tables to authenticated owners", () => {
+  const hardening = read("supabase/002_security_hardening.sql");
+  const tables = [
+    "pet_profiles",
+    "pet_blocked_ingredients",
+    "recipe_generations",
+    "saved_recipes",
+    "weekly_plans",
+    "weekly_plan_days"
+  ];
+  tables.forEach(table => {
+    assert.match(hardening, new RegExp(`alter table public\\.${table} enable row level security`));
+    assert.match(hardening, new RegExp(`revoke all on table public\\.${table} from public, anon`));
+    assert.match(hardening, new RegExp(`grant select, insert, update, delete on table public\\.${table} to authenticated`));
+  });
+  assert.equal((hardening.match(/^create policy /gm) || []).length, 9);
+  assert.equal((hardening.match(/to authenticated/g) || []).length, 15);
+  assert.equal((hardening.match(/\(select auth\.uid\(\)\) = user_id/g) || []).length, 15);
+});
