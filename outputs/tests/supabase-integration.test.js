@@ -102,6 +102,67 @@ test("weekly reload discards a saved plan that contains blocked mandioca", async
   assert.ok(saveCalls.some(value => value === null));
 });
 
+test("weekly custom plan generation avoids blocked mandioca family", async () => {
+  const weekly = read("session-4-weekly-plan.html");
+  const script = weekly.match(/<script>\s*([\s\S]*?)\s*<\/script>\s*<script src="\.\/pwa\.js"><\/script>/)[1];
+  const saveCalls = [];
+  const elements = new Map();
+  const element = id => {
+    if (!elements.has(id)) {
+      elements.set(id, {
+        id,
+        checked: id === "weeklyCustom",
+        hidden: false,
+        disabled: false,
+        innerHTML: "",
+        textContent: "",
+        listeners: {},
+        classList: { add() {}, remove() {}, toggle() {} },
+        addEventListener(event, callback) { this.listeners[event] = callback; },
+        querySelectorAll() { return []; },
+        querySelector() { return element(`${id}:child`); },
+        setAttribute() {},
+        showModal() {},
+        close() {}
+      });
+    }
+    return elements.get(id);
+  };
+  const document = {
+    getElementById: element,
+    querySelector: () => element("query"),
+    querySelectorAll: () => []
+  };
+  const context = {
+    document,
+    fetch: async () => ({ ok: false, json: async () => ({}) }),
+    alert(message) { throw new Error(String(message)); },
+    window: {
+      location: { protocol: "https:", replace(value) { this.replaced = value; } },
+      sessionStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+      BistroPetAccessibility: { stop() {} },
+      BistroPetSupabase: { authHeaders: async headers => headers },
+      BistroPetStorage: {
+        ready: async () => true,
+        getPetProfile: () => ({ name: "Luna", age: "3 anos", weight: "12 kg", size: "medio" }),
+        getOfficialRestrictions: () => ["mandioca"],
+        getGlobalBlockedIngredients: () => [],
+        getWeeklyPlan: () => null,
+        saveWeeklyPlan: async value => { saveCalls.push(value); return value; }
+      }
+    }
+  };
+  context.window.window = context.window;
+  context.window.document = document;
+  vm.runInNewContext(script, context);
+  await new Promise(resolve => setTimeout(resolve, 25));
+  await element("createWeekPlan").listeners.click();
+  const generatedPlan = saveCalls.find(value => Array.isArray(value) && value.length === 7);
+  assert.ok(generatedPlan);
+  const allIngredients = generatedPlan.flatMap(item => item.ingredients || []).map(item => String(item).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+  assert.ok(!allIngredients.some(item => /\b(mandioca|aipim|macaxeira)\b/.test(item)));
+});
+
 test("authentication implements signup, login, recovery and session isolation", () => {
   const client = read("bistropet-supabase.js");
   assert.match(client, /signUp\(/);
