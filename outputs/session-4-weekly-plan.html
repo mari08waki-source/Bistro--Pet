@@ -313,6 +313,12 @@
           .trim();
       }
 
+      function weeklyRestrictionKey(value) {
+        const clean = weeklyPreparedIngredientName(value);
+        if (/\b(mandioca|aipim|macaxeira)\b/.test(clean)) return "mandioca";
+        return clean;
+      }
+
       function cleanCustomIngredientList(value) {
         const clean = cleanCustomIngredient(value);
         if (!clean) return [];
@@ -332,9 +338,9 @@
       }
 
       function isRestricted(ingredient, restrictions) {
-        const cleanIngredient = weeklyPreparedIngredientName(ingredient);
+        const cleanIngredient = weeklyRestrictionKey(ingredient);
         return restrictions.some(item => {
-          const cleanRestriction = weeklyPreparedIngredientName(item);
+          const cleanRestriction = weeklyRestrictionKey(item);
           if (!cleanIngredient || !cleanRestriction) return false;
           if (cleanIngredient === cleanRestriction) return true;
           return ["carne", "peixe", "frango"].includes(cleanRestriction)
@@ -793,8 +799,12 @@
       function isSavedPlanValid(plan, profile) {
         const restrictions = activeWeeklyRestrictions(profile);
         return Array.isArray(plan) && plan.length === 7 && !plan.some(item => {
-          const text = `${item.title || ""} ${(item.ingredients || []).join(" ")}`;
-          return isRestricted(text, restrictions);
+          const ingredients = Array.isArray(item.ingredients) ? item.ingredients : [];
+          const recipeItems = uniqueIngredients([
+            ...ingredients,
+            ...extractIngredientTerms(item.title || "")
+          ]);
+          return recipeItems.some(ingredient => isRestricted(ingredient, restrictions));
         });
       }
 
@@ -819,7 +829,7 @@
         weeklyPlanner.classList.toggle("is-custom-mode", customSavedPlan);
         renderProfileWeeklyPlan(savedPlan);
       } else {
-        await clearWeeklyPlanState(false);
+        await clearWeeklyPlanState(Boolean(savedPlan));
         await updateModeState();
       }
       document.getElementById("weeklyAuto").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));

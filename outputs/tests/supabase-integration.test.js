@@ -33,6 +33,75 @@ test("profile textarea is not rewritten while the user is typing", () => {
   assert.match(profile, /notes: customProfile\.checked \? String\(data\.get\("notes"\)/);
 });
 
+test("weekly saved plans are revalidated ingredient by ingredient", () => {
+  const weekly = read("session-4-weekly-plan.html");
+  assert.match(weekly, /function weeklyRestrictionKey\(value\)/);
+  assert.match(weekly, /\\b\(mandioca\|aipim\|macaxeira\)\\b/);
+  assert.match(weekly, /const recipeItems = uniqueIngredients\(\[/);
+  assert.match(weekly, /recipeItems\.some\(ingredient => isRestricted\(ingredient, restrictions\)\)/);
+  assert.doesNotMatch(weekly, /const text = `\$\{item\.title \|\| ""\} \$\{\(item\.ingredients \|\| \[\]\)\.join\(" "\)\}`/);
+  assert.match(weekly, /await clearWeeklyPlanState\(Boolean\(savedPlan\)\)/);
+});
+
+test("weekly reload discards a saved plan that contains blocked mandioca", async () => {
+  const weekly = read("session-4-weekly-plan.html");
+  const script = weekly.match(/<script>\s*([\s\S]*?)\s*<\/script>\s*<script src="\.\/pwa\.js"><\/script>/)[1];
+  const savedPlan = Array.from({ length: 7 }, (_, index) => ({
+    day: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"][index],
+    planMode: "custom",
+    title: index === 4 ? "Frango com mandioca e cenoura" : "Frango com arroz e cenoura",
+    ingredients: index === 4 ? ["Frango", "Mandioca", "Cenoura"] : ["Frango", "Arroz", "Cenoura"],
+    prep: "Teste.",
+    image: "",
+    profile: { name: "Luna" }
+  }));
+  const saveCalls = [];
+  const element = id => ({
+    id,
+    checked: id === "weeklyAuto",
+    hidden: false,
+    disabled: false,
+    innerHTML: "",
+    textContent: "",
+    classList: { add() {}, remove() {}, toggle() {} },
+    addEventListener() {},
+    querySelectorAll() { return []; },
+    querySelector() { return element(`${id}:child`); },
+    setAttribute() {},
+    showModal() {},
+    close() {}
+  });
+  const document = {
+    getElementById: element,
+    querySelector: () => element("query"),
+    querySelectorAll: () => []
+  };
+  const context = {
+    document,
+    fetch: async () => ({ ok: false, json: async () => ({}) }),
+    alert(message) { throw new Error(String(message)); },
+    window: {
+      location: { protocol: "https:", replace(value) { this.replaced = value; } },
+      sessionStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+      BistroPetAccessibility: { stop() {} },
+      BistroPetSupabase: { authHeaders: async headers => headers },
+      BistroPetStorage: {
+        ready: async () => true,
+        getPetProfile: () => ({ name: "Luna", age: "3 anos", weight: "12 kg", size: "medio" }),
+        getOfficialRestrictions: () => ["mandioca"],
+        getGlobalBlockedIngredients: () => [],
+        getWeeklyPlan: () => savedPlan,
+        saveWeeklyPlan: async value => { saveCalls.push(value); return value; }
+      }
+    }
+  };
+  context.window.window = context.window;
+  context.window.document = document;
+  vm.runInNewContext(script, context);
+  await new Promise(resolve => setTimeout(resolve, 25));
+  assert.ok(saveCalls.some(value => value === null));
+});
+
 test("authentication implements signup, login, recovery and session isolation", () => {
   const client = read("bistropet-supabase.js");
   assert.match(client, /signUp\(/);
