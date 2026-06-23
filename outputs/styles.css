@@ -440,6 +440,27 @@ h3 {
   opacity: .62;
 }
 
+.chef-pet-card.has-session-logout {
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+}
+
+.chef-pet-card .bistropet-session-logout {
+  position: static;
+  z-index: auto;
+  justify-self: end;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+  border-color: var(--line);
+  background: transparent;
+  box-shadow: none;
+}
+
+.chef-pet-card .bistropet-session-logout svg {
+  width: 17px;
+  height: 17px;
+}
+
 .profile-session {
   width: 100%;
   min-height: 100vh;
@@ -493,7 +514,14 @@ h3 {
 }
 
 .profile-content {
+  display: grid;
+  justify-items: center;
   padding: 24px 16px 34px;
+}
+
+.profile-title {
+  width: 100%;
+  max-width: 358px;
 }
 
 .profile-title span {
@@ -515,8 +543,9 @@ h3 {
 .pet-profile-card {
   display: grid;
   gap: 14px;
-  width: calc(100vw - 32px);
+  width: 100%;
   max-width: 358px;
+  margin-inline: auto;
   padding: 18px 20px;
   background: rgba(255, 253, 248, 0.84);
   border: 1px solid var(--line);
@@ -662,6 +691,7 @@ h3 {
 }
 
 .meal-session {
+  justify-items: center;
   width: 100%;
   min-height: 100vh;
   padding: 22px 16px 26px;
@@ -675,7 +705,7 @@ h3 {
   gap: 12px;
   width: 100%;
   max-width: 358px;
-  margin: 0 0 14px;
+  margin: 0 auto 14px;
 }
 
 .meal-brand {
@@ -734,7 +764,7 @@ h3 {
 .prepared-meal-card {
   width: 100%;
   max-width: 358px;
-  margin: 0;
+  margin: 0 auto;
   overflow: hidden;
   background: rgba(255, 253, 248, 0.86);
   border: 1px solid var(--line);
@@ -863,9 +893,9 @@ h3 {
 .bistro-menu,
 .ingredient-studio,
 .chef-result {
-  width: calc(100vw - 32px);
+  width: 100%;
   max-width: 358px;
-  margin: 0;
+  margin: 0 auto;
 }
 
 .chef-pet-card {
@@ -1129,11 +1159,11 @@ h3 {
 
 .intelligent-kitchen {
   position: relative;
-  justify-self: start;
+  justify-self: center;
   width: 100%;
   max-width: 358px;
   min-height: 455px;
-  margin: 0;
+  margin: 0 auto;
   overflow: visible;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1357,11 +1387,11 @@ h3 {
 
 .weekly-planner {
   position: relative;
-  justify-self: start;
+  justify-self: center;
   width: 100%;
   max-width: 358px;
   min-height: 594px;
-  margin: 0;
+  margin: 0 auto;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1577,7 +1607,7 @@ h3 {
 
   .pet-profile-card {
     gap: 7px;
-    width: calc(100vw - 32px);
+    width: 100%;
     max-width: 358px;
     padding: 13px 20px;
   }
@@ -1747,7 +1777,7 @@ input:focus, select:focus, textarea:focus {
   .app-shell { overflow: hidden; }
   .workspace { padding: 18px 16px 34px; }
   .topbar { display: none; }
-  .screen, .welcome-grid, .welcome-grid > div { width: 100%; max-width: calc(100vw - 32px); }
+  .screen, .welcome-grid, .welcome-grid > div { width: 100%; max-width: calc(100vw - 32px); margin-inline: auto; }
   .lead { max-width: 330px; font-size: 16px; line-height: 1.5; margin-bottom: 18px; }
   .nav-tabs { width: calc(100vw - 32px); }
   .brand-panel { min-height: 450px; height: 50vh; }
@@ -1763,9 +1793,9 @@ input:focus, select:focus, textarea:focus {
   .onboarding-copy { padding-top: 0; }
   .onboarding-grid { gap: 18px; }
   .welcome-grid > .onboarding-card {
-    width: calc(100vw - 32px);
+    width: 100%;
     max-width: 358px;
-    justify-self: start;
+    justify-self: center;
     padding: 18px 20px;
     margin-top: -2px;
     overflow: hidden;

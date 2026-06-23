@@ -180,8 +180,23 @@ test("authenticated screens mount a shared logout control", () => {
   const styles = read("styles.css");
   assert.match(client, /mountSessionLogout\(\)/);
   assert.match(client, /\.session-two-body, \.session-three-body/);
+  assert.match(client, /document\.querySelector\("\.chef-pet-card"\)/);
+  assert.match(client, /petCard\.appendChild\(button\)/);
   assert.match(client, /await signOut\(\)/);
   assert.match(styles, /\.bistropet-session-logout/);
+  assert.match(styles, /\.chef-pet-card\.has-session-logout/);
+});
+
+test("mobile pages keep horizontal card alignment symmetric", () => {
+  const styles = read("styles.css");
+  assert.match(styles, /\.profile-content\s*\{[\s\S]*?justify-items: center;/);
+  assert.match(styles, /\.pet-profile-card\s*\{[\s\S]*?width: 100%;[\s\S]*?margin-inline: auto;/);
+  assert.match(styles, /\.meal-session\s*\{[\s\S]*?justify-items: center;/);
+  assert.match(styles, /\.chef-pet-card,[\s\S]*?\.chef-result\s*\{[\s\S]*?width: 100%;[\s\S]*?margin: 0 auto;/);
+  assert.match(styles, /\.intelligent-kitchen\s*\{[\s\S]*?justify-self: center;[\s\S]*?margin: 0 auto;/);
+  assert.match(styles, /\.weekly-planner\s*\{[\s\S]*?justify-self: center;[\s\S]*?margin: 0 auto;/);
+  assert.doesNotMatch(styles, /\.pet-profile-card\s*\{[^}]*width: calc\(100vw - 32px\);/);
+  assert.doesNotMatch(styles, /\.chef-pet-card,[^{]*\{[^}]*width: calc\(100vw - 32px\);/);
 });
 
 test("logout is local and cannot freeze indefinitely", () => {

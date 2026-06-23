@@ -203,6 +203,12 @@
         window.alert(error.message || "Não foi possível sair da conta.");
       }
     });
+    const petCard = document.querySelector(".chef-pet-card");
+    if (petCard) {
+      petCard.classList.add("has-session-logout");
+      petCard.appendChild(button);
+      return;
+    }
     document.body.appendChild(button);
   }
 
