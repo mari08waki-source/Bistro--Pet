@@ -1,7 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/*.js": {
+    "api/generate-recipe-image.js": {
+      "maxDuration": 60
+    },
+    "api/admin-access.js": {
+      "maxDuration": 10
+    },
+    "api/supabase-config.js": {
       "maxDuration": 10
     }
   }
