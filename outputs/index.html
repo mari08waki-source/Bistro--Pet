@@ -102,7 +102,11 @@
 
       function validateCredentials(requirePassword = true) {
         const value = credentials();
-        if (!value.email || (requirePassword && !value.password)) {
+        if (!value.email) {
+          alert("Preencha o email.");
+          return null;
+        }
+        if (requirePassword && !value.password) {
           alert("Preencha o email e a senha.");
           return null;
         }

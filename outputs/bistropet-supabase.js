@@ -95,7 +95,10 @@
 
   async function signIn(email, password) {
     const client = await ready();
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({
+      email: String(email || "").trim(),
+      password
+    });
     if (error) throw error;
     currentUser = data.user || null;
     return data;
@@ -104,7 +107,7 @@
   async function sendPasswordRecovery(email) {
     const client = await ready();
     const redirectTo = `${window.location.origin}/index.html`;
-    const { data, error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+    const { data, error } = await client.auth.resetPasswordForEmail(String(email || "").trim(), { redirectTo });
     if (error) throw error;
     return data;
   }
