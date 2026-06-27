@@ -126,8 +126,15 @@ nav { display: grid; gap: 5px; }
 
 @media (max-width: 520px) {
   .workspace { padding: 18px; }
-  .topbar { align-items: start; }
+  .login-card { padding: 22px; }
+  .topbar { align-items: start; flex-direction: column; gap: 12px; }
   .topbar-actions { align-items: end; flex-direction: column-reverse; }
+  .topbar h1 { font-size: 30px; }
+  .sidebar { padding: 20px 16px; }
+  nav { gap: 7px; }
+  .nav-item, .exit-preview { padding: 11px 10px; }
+  .group-heading { align-items: start; flex-direction: column; }
+  .export-button { width: 100%; }
   .metric-grid { grid-template-columns: 1fr; }
   .data-list li { grid-template-columns: 1fr; gap: 3px; }
 }

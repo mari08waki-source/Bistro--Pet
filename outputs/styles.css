@@ -659,7 +659,7 @@ h3 {
 }
 
 #customProfile:checked ~ .custom-note {
-  max-height: 120px;
+  max-height: 190px;
   opacity: 1;
   transform: translateY(0);
 }
@@ -1634,7 +1634,7 @@ h3 {
   }
 
   .pet-profile-card textarea {
-    min-height: 42px;
+    min-height: 72px;
   }
 
   .pet-profile-card .primary {

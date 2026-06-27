@@ -83,3 +83,19 @@ Painel administrativo isolado em `/admin`, autenticado pelo Supabase e limitado 
 - Não utiliza `localStorage` como fonte de dados.
 - Não modifica arquivos ou comportamentos da área do usuário.
 - O botão `Atualizar leitura` apenas recarrega as leituras atuais.
+
+## Escopo da primeira versão
+
+O painel administrativo da primeira versão permanece como uma Central Administrativa protegida,
+somente leitura e limitada à sessão autenticada. Essa decisão preserva a segurança atual do RLS
+e evita expor dados globais de clientes antes da criação de uma camada administrativa dedicada.
+
+Para uma evolução futura para painel global, a estrutura deve continuar separando:
+
+- autorização administrativa em `/api/admin-access`;
+- leitura e organização visual em `admin/admin.js`;
+- persistência de dados do usuário na camada `BistroPetStorage`;
+- estilos exclusivos em `admin/styles.css`.
+
+Uma versão global futura deve ser implementada em uma API administrativa própria, com credenciais
+de servidor protegidas e policies revisadas, sem reutilizar permissões do frontend comum.

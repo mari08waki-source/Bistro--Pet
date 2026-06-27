@@ -143,7 +143,7 @@ export default async function handler(request, response) {
     return sendJson(response, {
       status: "failed",
       message: "Imagem em preparo",
-      error: error.message
+      error: "Image generation temporarily unavailable."
     }, 500);
   }
 }
