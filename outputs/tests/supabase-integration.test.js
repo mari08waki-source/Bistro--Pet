@@ -46,6 +46,14 @@ test("paid plan business rules are enforced in storage layer", () => {
   assert.match(meal, /showWarning\(activeRecipeMode, usage\.message/);
 });
 
+test("V1 product rule keeps one pet profile per user", () => {
+  const schema = read("supabase/001_initial_schema.sql");
+  const adminDocs = read("admin/README.md");
+  assert.match(schema, /constraint pet_profiles_one_profile_per_user unique \(user_id\)/);
+  assert.match(adminDocs, /Regra oficial da V1: cada usuário possui 1 único perfil de pet ativo\./);
+  assert.doesNotMatch(adminDocs, /2 perfis|dois perfis|liberar 2|alteração no Supabase/i);
+});
+
 test("weekly saved plans are revalidated ingredient by ingredient", () => {
   const weekly = read("session-4-weekly-plan.html");
   assert.match(weekly, /function weeklyRestrictionKey\(value\)/);

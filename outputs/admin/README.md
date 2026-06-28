@@ -49,6 +49,7 @@ Painel administrativo isolado em `/admin`, autenticado pelo Supabase e limitado 
 
 ### Perfil do Pet
 
+- Regra oficial da V1: cada usuário possui 1 único perfil de pet ativo.
 - `name`: Nome do Pet.
 - `tutor`: Nome do Tutor.
 - `age`: Idade.
