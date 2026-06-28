@@ -994,6 +994,14 @@
           resetRecipeCard();
           return;
         }
+        if (window.BistroPetStorage && window.BistroPetStorage.recipeUsageStatus) {
+          const usage = await window.BistroPetStorage.recipeUsageStatus(activeRecipeMode);
+          if (!usage.allowed) {
+            showWarning(activeRecipeMode, usage.message || "O limite deste período já foi usado para este pet.");
+            resetRecipeCard();
+            return;
+          }
+        }
         const recipe = buildRecipe(activeRecipeMode);
         if (!recipe.ingredients.length) {
           showWarning(activeRecipeMode, "Todos os ingredientes disponíveis foram bloqueados. Remova um alimento proibido para gerar a receita.");

@@ -162,6 +162,34 @@
     };
   }
 
+  function startOfDayIso(date = new Date()) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    return start.toISOString();
+  }
+
+  function startOfWeekIso(date = new Date()) {
+    const start = new Date(date);
+    const day = start.getDay() || 7;
+    start.setDate(start.getDate() - day + 1);
+    start.setHours(0, 0, 0, 0);
+    return start.toISOString();
+  }
+
+  function historyCutoffIso(date = new Date()) {
+    const cutoff = new Date(date);
+    cutoff.setDate(cutoff.getDate() - 15);
+    cutoff.setHours(0, 0, 0, 0);
+    return cutoff.toISOString();
+  }
+
+  function historyKeyForRecipe(recipe) {
+    if (recipe.mode === "personalizada") {
+      return JSON.stringify(["customRecipeWeekly", cache.profileId, startOfWeekIso(), recipe.mode]);
+    }
+    return JSON.stringify([cache.profileId, recipe.mode, recipe.title, recipe.ingredients || [], recipe.steps || []]);
+  }
+
   async function loadWeeklyPlan(client, userId) {
     const { data: plan, error: planError } = await client
       .from("weekly_plans")
@@ -205,7 +233,7 @@
       client.from("pet_profiles").select("*").eq("user_id", user.id).maybeSingle(),
       client.from("pet_blocked_ingredients").select("ingredient_name, source").eq("user_id", user.id),
       client.from("recipe_generations").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      client.from("saved_recipes").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      client.from("saved_recipes").select("*").eq("user_id", user.id).gte("created_at", historyCutoffIso()).order("created_at", { ascending: false }),
       loadWeeklyPlan(client, user.id)
     ]);
 
@@ -242,6 +270,50 @@
   function getRecipeHistory() { return cache.recipeHistory.map(item => ({ ...item })); }
   function getWeeklyPlan() { return Array.isArray(cache.weeklyPlan) ? cache.weeklyPlan.map(item => ({ ...item })) : null; }
   function getCurrentUser() { return cache.user; }
+
+  async function recipeUsageStatus(mode) {
+    const client = await requireReady();
+    if (!cache.profileId) throw new Error("Perfil do pet não encontrado.");
+    if (mode === "chef") {
+      const { data, error } = await client
+        .from("recipe_generations")
+        .select("id, created_at")
+        .eq("user_id", cache.user.id)
+        .eq("pet_profile_id", cache.profileId)
+        .eq("recipe_type", "chef")
+        .gte("created_at", startOfDayIso())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        allowed: !data,
+        period: "day",
+        existingId: data?.id || null,
+        message: data ? "A sugestão do Chefe de hoje já foi criada para este pet." : ""
+      };
+    }
+    if (mode === "personalizada") {
+      const { data, error } = await client
+        .from("recipe_generations")
+        .select("id, created_at")
+        .eq("user_id", cache.user.id)
+        .eq("pet_profile_id", cache.profileId)
+        .eq("recipe_type", "personalizada")
+        .gte("created_at", startOfWeekIso())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        allowed: true,
+        period: "week",
+        existingId: data?.id || null,
+        replaceExisting: Boolean(data)
+      };
+    }
+    return { allowed: true };
+  }
 
   async function replaceBlockedSource(client, source, items) {
     const { error: deleteError } = await client
@@ -304,6 +376,10 @@
   async function saveLastRecipe(recipe) {
     const client = await requireReady();
     if (!cache.profileId) throw new Error("Perfil do pet não encontrado.");
+    const usage = await recipeUsageStatus(recipe.mode);
+    if (recipe.mode === "chef" && !usage.allowed && !recipe._generationId) {
+      throw new Error(usage.message || "A sugestão do Chefe de hoje já foi criada para este pet.");
+    }
     const payload = {
       user_id: cache.user.id,
       pet_profile_id: cache.profileId,
@@ -317,8 +393,9 @@
       updated_at: new Date().toISOString()
     };
     let result;
-    if (recipe._generationId) {
-      result = await client.from("recipe_generations").update(payload).eq("id", recipe._generationId).eq("user_id", cache.user.id).select("*").single();
+    const generationId = recipe._generationId || (recipe.mode === "personalizada" ? usage.existingId : null);
+    if (generationId) {
+      result = await client.from("recipe_generations").update(payload).eq("id", generationId).eq("user_id", cache.user.id).select("*").single();
     } else {
       result = await client.from("recipe_generations").insert(payload).select("*").single();
     }
@@ -331,7 +408,7 @@
   async function addRecipeToHistory(recipe) {
     const client = await requireReady();
     if (!cache.profileId) throw new Error("Perfil do pet não encontrado.");
-    const historyKey = JSON.stringify([recipe.mode, recipe.title, recipe.ingredients || [], recipe.steps || []]);
+    const historyKey = historyKeyForRecipe(recipe);
     const payload = {
       user_id: cache.user.id,
       pet_profile_id: cache.profileId,
@@ -415,6 +492,7 @@
     hasPetProfile,
     getPetProfile,
     savePetProfile,
+    recipeUsageStatus,
     extractFoodRestrictions,
     getOfficialRestrictions,
     getLastRecipe,

@@ -33,6 +33,19 @@ test("profile textarea is not rewritten while the user is typing", () => {
   assert.match(profile, /notes: customProfile\.checked \? String\(data\.get\("notes"\)/);
 });
 
+test("paid plan business rules are enforced in storage layer", () => {
+  const storage = read("bistropet-storage.js");
+  const meal = read("session-3-meal.html");
+  assert.match(storage, /function recipeUsageStatus\(mode\)/);
+  assert.match(storage, /\.eq\("recipe_type", "chef"\)[\s\S]*?\.gte\("created_at", startOfDayIso\(\)\)/);
+  assert.match(storage, /\.eq\("recipe_type", "personalizada"\)[\s\S]*?\.gte\("created_at", startOfWeekIso\(\)\)/);
+  assert.match(storage, /recipe\.mode === "personalizada" \? usage\.existingId : null/);
+  assert.match(storage, /customRecipeWeekly/);
+  assert.match(storage, /\.gte\("created_at", historyCutoffIso\(\)\)/);
+  assert.match(meal, /window\.BistroPetStorage\.recipeUsageStatus\(activeRecipeMode\)/);
+  assert.match(meal, /showWarning\(activeRecipeMode, usage\.message/);
+});
+
 test("weekly saved plans are revalidated ingredient by ingredient", () => {
   const weekly = read("session-4-weekly-plan.html");
   assert.match(weekly, /function weeklyRestrictionKey\(value\)/);
