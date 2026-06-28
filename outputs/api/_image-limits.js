@@ -26,13 +26,17 @@ function periodSeconds(period, now = new Date()) {
   return Math.max(60, Math.ceil((nextDay - now) / 1000));
 }
 
-export async function checkImageLimit({ generationType, clientId }) {
+function limitUsagePath({ generationType, clientId }) {
   const config = defaultLimits[generationType];
   if (!config) throw new Error("Invalid image generation type.");
   const key = periodKey(config.period);
   const safeClientId = String(clientId || "").replace(/[^a-z0-9_-]/gi, "").slice(0, 80);
   if (!safeClientId) throw new Error("A verified image client is required.");
-  const path = `bistropet:image-usage:${safeClientId}:${generationType}:${key}`;
+  return { config, path: `bistropet:image-usage:${safeClientId}:${generationType}:${key}` };
+}
+
+export async function checkImageLimit({ generationType, clientId }) {
+  const { config, path } = limitUsagePath({ generationType, clientId });
   let count;
   if (process.env.IMAGE_LIMIT_STORAGE === "memory") {
     count = Number(memoryUsage.get(path) || 0) + 1;
@@ -55,4 +59,20 @@ export async function checkImageLimit({ generationType, clientId }) {
     period: config.period,
     remaining: Math.max(0, config.limit - count)
   };
+}
+
+export async function refundImageLimit({ generationType, clientId }) {
+  const { path } = limitUsagePath({ generationType, clientId });
+  if (process.env.IMAGE_LIMIT_STORAGE === "memory") {
+    const count = Math.max(0, Number(memoryUsage.get(path) || 0) - 1);
+    if (count) memoryUsage.set(path, count);
+    else memoryUsage.delete(path);
+    return count;
+  }
+  const count = Number(await imageRedisCommand(["DECR", path]));
+  if (count <= 0) {
+    await imageRedisCommand(["DEL", path]);
+    return 0;
+  }
+  return count;
 }

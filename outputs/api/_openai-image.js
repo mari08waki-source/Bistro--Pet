@@ -19,8 +19,17 @@ export function buildExactRecipeImagePrompt({ recipeName, ingredients }) {
   ].join(" ");
 }
 
+function imageProviderLog(event, details = {}) {
+  try {
+    console.info("[bistropet:image-provider]", JSON.stringify({ event, ...details }));
+  } catch (_error) {
+    console.info("[bistropet:image-provider]", event);
+  }
+}
+
 export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) {
   if (process.env.IMAGE_GENERATION_MODE === "validate") {
+    imageProviderLog("validate_image_returned", { size });
     return Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
       "base64"
@@ -36,6 +45,7 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
   }
 
   const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+  imageProviderLog("gemini_request_start", { model, size });
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: {
@@ -51,6 +61,12 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
   });
 
   const data = await response.json();
+  imageProviderLog("gemini_http_response", {
+    model,
+    ok: response.ok,
+    status: response.status,
+    hasCandidates: Boolean(data.candidates?.length)
+  });
   if (!response.ok) {
     throw new Error(data.error?.message || "Image generation failed.");
   }
@@ -58,6 +74,11 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
   const parts = data.candidates?.[0]?.content?.parts || [];
   const image = parts.find(part => part.inlineData?.data || part.inline_data?.data);
   const imageData = image?.inlineData?.data || image?.inline_data?.data;
+  imageProviderLog("gemini_image_part_checked", {
+    model,
+    hasImage: Boolean(imageData),
+    parts: parts.length
+  });
   if (imageData) return Buffer.from(imageData, "base64");
   throw new Error("Image response did not include image data.");
 }

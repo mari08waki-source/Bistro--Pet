@@ -4,7 +4,7 @@ import { identifyImageClient } from "../api/_image-client.js";
 import { withImageRequestLock } from "../api/_image-request-lock.js";
 import { generateOpenAIRecipeImage } from "../api/_openai-image.js";
 import handler from "../api/generate-recipe-image.js";
-import { checkImageLimit } from "../api/_image-limits.js";
+import { checkImageLimit, refundImageLimit } from "../api/_image-limits.js";
 
 function responseStub() {
   const headers = new Map();
@@ -81,6 +81,11 @@ test("atomic store commands enforce distributed limits and locks", async () => {
     if (command === "INCR") {
       result = Number(values.get(key) || 0) + 1;
       values.set(key, result);
+    } else if (command === "DECR") {
+      result = Number(values.get(key) || 0) - 1;
+      values.set(key, result);
+    } else if (command === "DEL") {
+      result = Number(values.delete(key));
     } else if (command === "EXPIRE") {
       result = 1;
     } else if (command === "SET" && args.includes("NX")) {
@@ -102,6 +107,8 @@ test("atomic store commands enforce distributed limits and locks", async () => {
     const secondLimit = await checkImageLimit({ generationType: "chefSuggestion", clientId: "atomic-client" });
     assert.equal(firstLimit.allowed, true);
     assert.equal(secondLimit.allowed, false);
+    const refundedCount = await refundImageLimit({ generationType: "chefSuggestion", clientId: "atomic-client" });
+    assert.equal(refundedCount, 1);
 
     let release;
     const pending = new Promise(resolve => {
@@ -205,6 +212,30 @@ test("handler applies one daily request per individual generation type", async (
   });
   assert.equal(second.statusCode, 429);
   assert.equal(second.body.status, "limit_exceeded");
+});
+
+test("failed image generation refunds the consumed image counter", async () => {
+  delete process.env.GEMINI_API_KEY;
+  process.env.IMAGE_GENERATION_MODE = "live";
+  process.env.IMAGE_LIMIT_STORAGE = "memory";
+  process.env.IMAGE_STORAGE_MODE = "memory";
+  process.env.IMAGE_LOCK_STORAGE = "memory";
+
+  const failed = await callHandler({
+    generationType: "customRecipe",
+    userId: "refund-user",
+    recipe: { id: "failed", recipeName: "Teste falha", ingredients: ["Arroz"] }
+  });
+  assert.equal(failed.statusCode, 500);
+
+  process.env.IMAGE_GENERATION_MODE = "validate";
+  const retry = await callHandler({
+    generationType: "customRecipe",
+    userId: "refund-user",
+    recipe: { id: "retry", recipeName: "Teste retry", ingredients: ["Batata"] }
+  });
+  assert.equal(retry.statusCode, 200);
+  assert.equal(retry.body.status, "ready");
 });
 
 test("daily limits are independent for custom and chef requests", async () => {
