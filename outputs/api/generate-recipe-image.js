@@ -52,8 +52,8 @@ export default async function handler(request, response) {
     if (generationType !== "weeklyPlan" && recipes.length !== 1) {
       return sendJson(response, { error: "Individual image requests must contain exactly one recipe." }, 400);
     }
-    if (generationType === "weeklyPlan" && recipes.length > 7) {
-      return sendJson(response, { error: "Weekly image requests cannot contain more than seven recipes." }, 400);
+    if (generationType === "weeklyPlan" && recipes.length !== 1) {
+      return sendJson(response, { error: "Weekly image requests must contain exactly one day recipe." }, 400);
     }
 
     return await withImageRequestLock(`${clientId}:${generationType}`, async () => {
@@ -85,43 +85,29 @@ export default async function handler(request, response) {
       }
 
       const results = [];
-      const missing = [];
-      const missingByCacheKey = new Map();
-      const limit = await checkImageLimit({ generationType, clientId });
-      if (!limit.allowed) {
-        return sendJson(response, {
-          status: "limit_exceeded",
-          message: "Imagem em preparo",
-          limit,
-          images: []
-        }, 429);
-      }
-
+      let limit = null;
       for (const recipe of recipes) {
         const combination = simpleIngredientCombination(recipe.ingredients);
         const cacheKey = imageCacheKey(combination);
         const cachedUrl = await getCachedImage(cacheKey);
         if (cachedUrl) {
           results.push({ id: recipe.id, cacheKey, combination, imageUrl: cachedUrl, status: "ready", cached: true });
-        } else {
-          const existing = missingByCacheKey.get(cacheKey);
-          if (existing) {
-            existing.recipes.push(recipe);
-          } else {
-            const item = { recipes: [recipe], cacheKey, combination };
-            missingByCacheKey.set(cacheKey, item);
-            missing.push(item);
-          }
+          continue;
         }
-      }
 
-      for (const item of missing) {
-        const prompt = buildRecipeImagePrompt(item.combination);
+        limit = await checkImageLimit({ generationType, clientId });
+        if (!limit.allowed) {
+          return sendJson(response, {
+            status: "limit_exceeded",
+            message: "Imagem em preparo",
+            limit,
+            images: []
+          }, 429);
+        }
+        const prompt = buildRecipeImagePrompt(combination);
         const imageBuffer = await generateOpenAIRecipeImage({ prompt });
-        const imageUrl = await saveCachedImage(item.cacheKey, imageBuffer);
-        item.recipes.forEach(recipe => {
-          results.push({ id: recipe.id, cacheKey: item.cacheKey, combination: item.combination, imageUrl, status: "ready", cached: false });
-        });
+        const imageUrl = await saveCachedImage(cacheKey, imageBuffer);
+        results.push({ id: recipe.id, cacheKey, combination, imageUrl, status: "ready", cached: false });
       }
 
       return sendJson(response, { status: "ready", images: results, limit });

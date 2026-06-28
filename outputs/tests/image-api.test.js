@@ -273,26 +273,58 @@ test("image endpoint rejects anonymous requests before any provider call", async
   assert.equal(response.body.status, "unauthorized");
 });
 
-test("handler applies one weekly plan request per week and caps it at seven recipes", async () => {
+test("handler allows up to seven weekly plan day images on demand", async () => {
   process.env.IMAGE_GENERATION_MODE = "validate";
   process.env.IMAGE_LIMIT_STORAGE = "memory";
   process.env.IMAGE_STORAGE_MODE = "memory";
   process.env.IMAGE_LOCK_STORAGE = "memory";
+  process.env.IMAGE_WEEKLY_LIMIT_WEEKLY_PLAN = "7";
 
-  const recipes = Array.from({ length: 7 }, (_, index) => ({
-    id: String(index),
-    ingredients: ["Frango", `Arroz ${index}`, `Cenoura ${index}`]
-  }));
-  const first = await callHandler({ generationType: "weeklyPlan", recipes });
-  assert.equal(first.statusCode, 200);
-  assert.equal(first.body.images.length, 7);
+  const weeklyDayRecipes = [
+    ["Frango", "Arroz", "Cenoura"],
+    ["Peixe", "Batata", "Chuchu"],
+    ["Carne", "Quinoa", "Abóbora"],
+    ["Peru", "Inhame", "Abobrinha"],
+    ["Ovos", "Aveia", "Pepino"],
+    ["Frango", "Mandioquinha", "Vagem"],
+    ["Peixe", "Arroz", "Beterraba"]
+  ];
 
-  const second = await callHandler({ generationType: "weeklyPlan", userId: "test-user", recipes });
-  assert.equal(second.statusCode, 429);
+  for (let index = 0; index < weeklyDayRecipes.length; index += 1) {
+    const response = await callHandler({
+      generationType: "weeklyPlan",
+      userId: "weekly-day-user",
+      recipes: [{
+        id: String(index),
+        ingredients: weeklyDayRecipes[index]
+      }]
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.images.length, 1);
+  }
+
+  const cached = await callHandler({
+    generationType: "weeklyPlan",
+    userId: "weekly-day-user",
+    recipes: [{ id: "cached", ingredients: weeklyDayRecipes[0] }]
+  });
+  assert.equal(cached.statusCode, 200);
+  assert.equal(cached.body.images[0].cached, true);
+
+  const eighth = await callHandler({
+    generationType: "weeklyPlan",
+    userId: "weekly-day-user",
+    recipes: [{ id: "7", ingredients: ["Carne", "Batata", "Couve"] }]
+  });
+  assert.equal(eighth.statusCode, 429);
 
   const oversized = await callHandler({
     generationType: "weeklyPlan",
-    recipes: [...recipes, { id: "7", ingredients: ["Peru"] }]
+    recipes: [
+      { id: "1", ingredients: ["Frango"] },
+      { id: "2", ingredients: ["Peru"] }
+    ]
   });
   assert.equal(oversized.statusCode, 400);
+  delete process.env.IMAGE_WEEKLY_LIMIT_WEEKLY_PLAN;
 });

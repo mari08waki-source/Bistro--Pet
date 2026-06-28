@@ -26,6 +26,9 @@
       #weeklyPlanner .selected-day-recipe { margin-top: 12px; }
       #weeklyPlanner .selected-day-recipe .week-day-card { grid-template-columns: 68px 1fr; }
       #weeklyPlanner .selected-day-recipe .week-day-card img { width: 68px; height: 58px; }
+      #weeklyPlanner .weekly-image-action { margin-top: 10px; }
+      #weeklyPlanner .weekly-image-action button { width: 100%; min-height: 36px; border: 1px solid rgba(196, 145, 53, 0.24); border-radius: 999px; background: rgba(255, 248, 232, 0.86); color: #76551f; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; cursor: pointer; }
+      #weeklyPlanner .weekly-image-action button:disabled { cursor: wait; opacity: 0.7; }
       #weeklyPlanner.is-custom-mode .weekly-controls { background: linear-gradient(180deg, rgba(255, 248, 232, 0.96), rgba(244, 224, 184, 0.82)); border-color: rgba(196, 145, 53, 0.26); }
       #weeklyPlanner.is-custom-mode .kitchen-switch[for="weeklyCustom"] { background: rgba(234, 216, 180, 0.82); color: #76551f; }
 	      #weeklyPlanner .weekly-audio-actions { margin-top: 10px; }
@@ -143,6 +146,7 @@
       let currentPlan = [];
       let activeDayIndex = null;
       let activeWeeklyMode = "auto";
+      let weeklyImageLoadingIndex = null;
       const imagePreparingSrc = "./recipe-weekly-neutral-photo.png";
       const imageEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-recipe-image";
 
@@ -179,11 +183,22 @@
         return `${grams} g de ${ingredient}`;
       }
 
-      function createDayCard(day, title, image, details, open = false) {
+      function hasWeeklyDishImage(image) {
+        return Boolean(image && image !== imagePreparingSrc);
+      }
+
+      function createDayCard(day, title, image, details, open = false, dayIndex = null) {
         const preparationSteps = String(details && details.prep || "")
           .split(/(?<=[.!?])\s+/)
           .map(step => step.trim())
           .filter(Boolean);
+        const imageActionMarkup = dayIndex === null ? "" : `
+          <div class="weekly-image-action">
+            <button type="button" data-weekly-image-index="${dayIndex}" ${weeklyImageLoadingIndex === dayIndex ? "disabled" : ""} aria-label="Ver imagem do prato de ${day}">
+              ${weeklyImageLoadingIndex === dayIndex ? "📷 Preparando imagem" : "📷 Ver imagem do prato"}
+            </button>
+          </div>
+        `;
         const detailMarkup = details && Array.isArray(details.ingredients) ? `
           <div class="week-day-details"${open ? "" : " hidden"}>
             <div class="ingredient-list">
@@ -202,6 +217,7 @@
             <div>
               <strong>${day}</strong>
               <span>${title}</span>
+              ${imageActionMarkup}
               ${detailMarkup}
             </div>
           </article>
@@ -695,31 +711,37 @@
         }));
       }
 
-      async function generateWeeklyPlanImages(plan) {
-        if (!imageEndpoint || !plan.length) return;
+      async function generateWeeklyDayImage(dayIndex) {
+        if (!imageEndpoint || weeklyImageLoadingIndex !== null) return;
+        const recipe = currentPlan[dayIndex];
+        if (!recipe || hasWeeklyDishImage(recipe.image)) return;
+        weeklyImageLoadingIndex = dayIndex;
+        renderProfileWeeklyPlan(currentPlan);
         try {
           const response = await fetch(imageEndpoint, {
             method: "POST",
             headers: await window.BistroPetSupabase.authHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               generationType: "weeklyPlan",
-              recipes: plan.map((item, index) => ({
-                id: String(index),
-                ingredients: item.ingredients
-              }))
+              recipes: [{
+                id: String(dayIndex),
+                recipeName: recipe.title,
+                ingredients: recipe.ingredients
+              }]
             })
           });
           const data = await response.json();
           if (!response.ok || !Array.isArray(data.images)) return;
-          data.images.forEach(image => {
-            const index = Number(image.id);
-            if (!Number.isNaN(index) && currentPlan[index] && image.imageUrl) {
-              currentPlan[index].image = image.imageUrl;
-            }
-          });
+          const image = data.images.find(item => String(item.id) === String(dayIndex));
+          if (image && image.imageUrl && currentPlan[dayIndex]) {
+            currentPlan[dayIndex].image = image.imageUrl;
+            if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
+          }
+        } catch (error) {
+        } finally {
+          weeklyImageLoadingIndex = null;
           renderProfileWeeklyPlan(currentPlan);
-          if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
-        } catch (error) {}
+        }
       }
 
 	      async function clearWeeklyPlanState(persist = true) {
@@ -754,7 +776,8 @@
                 currentPlan[activeDayIndex].title,
                 currentPlan[activeDayIndex].image,
                 currentPlan[activeDayIndex],
-                true
+                true,
+                activeDayIndex
               )}
             </div>`}
           </div>
@@ -772,6 +795,13 @@
 	            if (event.key !== "Enter" && event.key !== " ") return;
 	            event.preventDefault();
 	            toggleDayDetails(card);
+	          });
+	        });
+	        weeklyDays.querySelectorAll("[data-weekly-image-index]").forEach(button => {
+	          button.addEventListener("click", event => {
+	            event.stopPropagation();
+	            const dayIndex = Number(button.dataset.weeklyImageIndex);
+	            generateWeeklyDayImage(dayIndex);
 	          });
 	        });
         weeklyPlanner.classList.add("is-generated");
@@ -815,7 +845,6 @@
         activeDayIndex = null;
         renderProfileWeeklyPlan(plan);
         await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
-        generateWeeklyPlanImages(plan);
       }
 
       const savedProfile = window.BistroPetStorage.getPetProfile();

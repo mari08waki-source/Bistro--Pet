@@ -3,7 +3,7 @@ import { imageRedisCommand } from "./_image-redis.js";
 const defaultLimits = {
   customRecipe: { limit: Number(process.env.IMAGE_DAILY_LIMIT_CUSTOM_RECIPE || 1), period: "day" },
   chefSuggestion: { limit: Number(process.env.IMAGE_DAILY_LIMIT_CHEF_SUGGESTION || 1), period: "day" },
-  weeklyPlan: { limit: Number(process.env.IMAGE_WEEKLY_LIMIT_WEEKLY_PLAN || 1), period: "week" }
+  weeklyPlan: { limit: Number(process.env.IMAGE_WEEKLY_LIMIT_WEEKLY_PLAN || 7), period: "week" }
 };
 
 const memoryUsage = globalThis.__bistropetImageLimitUsage || new Map();
