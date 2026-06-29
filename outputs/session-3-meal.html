@@ -997,6 +997,10 @@
         if (window.BistroPetStorage && window.BistroPetStorage.recipeUsageStatus) {
           const usage = await window.BistroPetStorage.recipeUsageStatus(activeRecipeMode);
           if (!usage.allowed) {
+            if (activeRecipeMode === "chef" && usage.existingRecipe) {
+              renderRecipe(usage.existingRecipe);
+              return;
+            }
             showWarning(activeRecipeMode, usage.message || "O limite deste período já foi usado para este pet.");
             resetRecipeCard();
             return;

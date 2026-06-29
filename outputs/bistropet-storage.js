@@ -277,7 +277,7 @@
     if (mode === "chef") {
       const { data, error } = await client
         .from("recipe_generations")
-        .select("id, created_at, image_url")
+        .select("*")
         .eq("user_id", cache.user.id)
         .eq("pet_profile_id", cache.profileId)
         .eq("recipe_type", "chef")
@@ -292,6 +292,7 @@
         period: "day",
         existingId: data?.id || null,
         completeImageOnly: Boolean(data && !hasCompletedImage),
+        existingRecipe: hasCompletedImage ? recipeFromGeneration(data) : null,
         message: data ? "A sugestão do Chefe de hoje já foi criada para este pet." : ""
       };
     }
