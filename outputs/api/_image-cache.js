@@ -13,6 +13,14 @@ export async function getCachedImage(cacheKey) {
   if (process.env.IMAGE_STORAGE_MODE === "memory") return memoryImages.get(cacheKey) || null;
   try {
     const blob = await head(`recipe-images/${cacheKey}.png`);
+    if (process.env.IMAGE_GENERATION_MODE === "live" && Number(blob.size || 0) > 0 && Number(blob.size || 0) < 1024) {
+      console.info("[bistropet:image-cache]", JSON.stringify({
+        event: "ignored_tiny_cached_image",
+        cacheKey,
+        size: Number(blob.size || 0)
+      }));
+      return null;
+    }
     return blob.url;
   } catch (error) {
     return null;

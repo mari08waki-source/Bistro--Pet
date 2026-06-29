@@ -731,13 +731,15 @@
             })
           });
           const data = await response.json();
-          if (!response.ok || !Array.isArray(data.images)) return;
+          if (!response.ok) throw new Error(data.message || "Não foi possível gerar a imagem do prato.");
+          if (!Array.isArray(data.images)) throw new Error("A resposta da imagem veio incompleta.");
           const image = data.images.find(item => String(item.id) === String(dayIndex));
           if (image && image.imageUrl && currentPlan[dayIndex]) {
             currentPlan[dayIndex].image = image.imageUrl;
             if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
           }
         } catch (error) {
+          alert(error.message || "Não foi possível gerar a imagem do prato agora. Tente novamente em instantes.");
         } finally {
           weeklyImageLoadingIndex = null;
           renderProfileWeeklyPlan(currentPlan);

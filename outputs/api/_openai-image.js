@@ -45,7 +45,12 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
   }
 
   const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
-  imageProviderLog("gemini_request_start", { model, size });
+  imageProviderLog("gemini_request_start", {
+    mode: process.env.IMAGE_GENERATION_MODE,
+    model,
+    size,
+    promptLength: String(prompt || "").length
+  });
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: {
@@ -77,7 +82,8 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
   imageProviderLog("gemini_image_part_checked", {
     model,
     hasImage: Boolean(imageData),
-    parts: parts.length
+    parts: parts.length,
+    imageBytes: imageData ? Buffer.byteLength(imageData, "base64") : 0
   });
   if (imageData) return Buffer.from(imageData, "base64");
   throw new Error("Image response did not include image data.");

@@ -39,7 +39,8 @@ test("paid plan business rules are enforced in storage layer", () => {
   assert.match(storage, /function recipeUsageStatus\(mode\)/);
   assert.match(storage, /\.eq\("recipe_type", "chef"\)[\s\S]*?\.gte\("created_at", startOfDayIso\(\)\)/);
   assert.match(storage, /\.eq\("recipe_type", "personalizada"\)[\s\S]*?\.gte\("created_at", startOfWeekIso\(\)\)/);
-  assert.match(storage, /recipe\.mode === "personalizada" \? usage\.existingId : null/);
+  assert.match(storage, /recipe\.mode === "personalizada" \|\| usage\.completeImageOnly \? usage\.existingId : null/);
+  assert.match(storage, /completeImageOnly: Boolean\(data && !hasCompletedImage\)/);
   assert.match(storage, /customRecipeWeekly/);
   assert.match(storage, /\.gte\("created_at", historyCutoffIso\(\)\)/);
   assert.match(meal, /window\.BistroPetStorage\.recipeUsageStatus\(activeRecipeMode\)/);

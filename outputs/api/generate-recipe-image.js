@@ -76,6 +76,7 @@ export default async function handler(request, response) {
       if (generationType !== "weeklyPlan") {
         const limit = await checkImageLimit({ generationType, clientId });
         imageLog("generation_start", {
+          mode: process.env.IMAGE_GENERATION_MODE,
           generationType,
           user: safeClientId(clientId),
           allowed: limit.allowed,
@@ -132,7 +133,8 @@ export default async function handler(request, response) {
               generationType,
               user: safeClientId(clientId),
               recipeId: recipe.id,
-              hasUrl: Boolean(imageUrl)
+              hasUrl: Boolean(imageUrl),
+              imageUrl
             });
             results.push({ id: recipe.id, imageUrl, status: "ready", cached: false });
           } catch (error) {
@@ -175,6 +177,7 @@ export default async function handler(request, response) {
 
         limit = await checkImageLimit({ generationType, clientId });
         imageLog("generation_start", {
+          mode: process.env.IMAGE_GENERATION_MODE,
           generationType,
           user: safeClientId(clientId),
           allowed: limit.allowed,
@@ -224,7 +227,8 @@ export default async function handler(request, response) {
             generationType,
             user: safeClientId(clientId),
             recipeId: recipe.id,
-            hasUrl: Boolean(imageUrl)
+            hasUrl: Boolean(imageUrl),
+            imageUrl
           });
           results.push({ id: recipe.id, cacheKey, combination, imageUrl, status: "ready", cached: false });
         } catch (error) {
