@@ -924,6 +924,12 @@
       }
 
       document.getElementById("mealPhoto").addEventListener("error", event => {
+        if (currentGeneratedRecipe && currentGeneratedRecipe.mode === "chef" && currentGeneratedRecipe._generationId && !event.currentTarget.dataset.chefImageRetry) {
+          event.currentTarget.dataset.chefImageRetry = "1";
+          currentGeneratedRecipe.image = "";
+          generateRecipeImage(currentGeneratedRecipe);
+          return;
+        }
         event.currentTarget.hidden = true;
         event.currentTarget.removeAttribute("src");
       });
@@ -938,6 +944,7 @@
         document.getElementById("resultIngredients").innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(displayIngredientWithPortion(item))}</li>`).join("");
         document.getElementById("prepSteps").innerHTML = recipe.steps.map(item => `<p>${escapeHtml(item)}</p>`).join("");
         const photo = document.getElementById("mealPhoto");
+        delete photo.dataset.chefImageRetry;
         photo.hidden = !recipe.image;
         if (recipe.image) photo.src = recipe.image;
         else photo.removeAttribute("src");
@@ -999,6 +1006,7 @@
           if (!usage.allowed) {
             if (activeRecipeMode === "chef" && usage.existingRecipe) {
               renderRecipe(usage.existingRecipe);
+              if (!usage.existingRecipe.image) generateRecipeImage(usage.existingRecipe);
               return;
             }
             showWarning(activeRecipeMode, usage.message || "O limite deste período já foi usado para este pet.");
