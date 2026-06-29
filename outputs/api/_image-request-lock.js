@@ -33,12 +33,20 @@ export async function withImageRequestLock(key, task) {
   try {
     return await task();
   } finally {
-    await imageRedisCommand([
-      "EVAL",
-      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
-      "1",
-      lockKey,
-      token
-    ]);
+    try {
+      await imageRedisCommand([
+        "EVAL",
+        "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+        "1",
+        lockKey,
+        token
+      ]);
+    } catch (error) {
+      console.info("[bistropet:image-lock]", JSON.stringify({
+        event: "release_failed",
+        key,
+        error: error.message
+      }));
+    }
   }
 }

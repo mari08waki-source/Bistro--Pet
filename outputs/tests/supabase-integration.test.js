@@ -39,16 +39,13 @@ test("paid plan business rules are enforced in storage layer", () => {
   assert.match(storage, /function recipeUsageStatus\(mode\)/);
   assert.match(storage, /\.eq\("recipe_type", "chef"\)[\s\S]*?\.gte\("created_at", startOfDayIso\(\)\)/);
   assert.match(storage, /\.eq\("recipe_type", "personalizada"\)[\s\S]*?\.gte\("created_at", startOfWeekIso\(\)\)/);
-  assert.match(storage, /recipe\.mode === "personalizada" \|\| usage\.completeImageOnly \? usage\.existingId : null/);
-  assert.match(storage, /completeImageOnly: Boolean\(data && !hasCompletedImage\)/);
-  assert.match(storage, /existingRecipe: data \? recipeFromGeneration\(data\) : null/);
+  assert.match(storage, /allowed: !data/);
+  assert.match(storage, /recipe\.mode === "personalizada" \? usage\.existingId : null/);
   assert.match(storage, /customRecipeWeekly/);
   assert.match(storage, /\.gte\("created_at", historyCutoffIso\(\)\)/);
   assert.match(meal, /window\.BistroPetStorage\.recipeUsageStatus\(activeRecipeMode\)/);
-  assert.match(meal, /activeRecipeMode === "chef" && usage\.existingRecipe/);
-  assert.match(meal, /renderRecipe\(usage\.existingRecipe\)/);
-  assert.match(meal, /!usage\.existingRecipe\.image\) generateRecipeImage\(usage\.existingRecipe\)/);
-  assert.match(meal, /currentGeneratedRecipe\.mode === "chef"[\s\S]*?generateRecipeImage\(currentGeneratedRecipe\)/);
+  assert.doesNotMatch(meal, /usage\.existingRecipe/);
+  assert.doesNotMatch(meal, /chefImageRetry/);
   assert.match(meal, /showWarning\(activeRecipeMode, usage\.message/);
 });
 

@@ -213,7 +213,7 @@
         ` : "";
         return `
 	          <article class="week-day-card" role="button" tabindex="0" data-expandable-day aria-expanded="${open ? "true" : "false"}" aria-label="${day}: ${title}">
-            <img src="${image || imagePreparingSrc}" alt="${title}" onerror="this.onerror=null;this.src='./recipe-weekly-neutral-photo.png'" />
+            <img src="${image || imagePreparingSrc}" alt="${title}" onerror="this.onerror=null;this.src='./recipe-weekly-neutral-photo.png';alert('A imagem do prato não carregou corretamente. O plano em texto foi mantido.')" />
             <div>
               <strong>${day}</strong>
               <span>${title}</span>
@@ -712,7 +712,11 @@
       }
 
       async function generateWeeklyDayImage(dayIndex) {
-        if (!imageEndpoint || weeklyImageLoadingIndex !== null) return;
+        if (!imageEndpoint) {
+          alert("A imagem do prato não está disponível neste modo de visualização.");
+          return;
+        }
+        if (weeklyImageLoadingIndex !== null) return;
         const recipe = currentPlan[dayIndex];
         if (!recipe || hasWeeklyDishImage(recipe.image)) return;
         weeklyImageLoadingIndex = dayIndex;
@@ -734,6 +738,7 @@
           if (!response.ok) throw new Error(data.message || "Não foi possível gerar a imagem do prato.");
           if (!Array.isArray(data.images)) throw new Error("A resposta da imagem veio incompleta.");
           const image = data.images.find(item => String(item.id) === String(dayIndex));
+          if (!image || !image.imageUrl) throw new Error("A imagem do prato não foi retornada corretamente.");
           if (image && image.imageUrl && currentPlan[dayIndex]) {
             currentPlan[dayIndex].image = image.imageUrl;
             if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);

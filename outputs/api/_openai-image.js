@@ -27,6 +27,12 @@ function imageProviderLog(event, details = {}) {
   }
 }
 
+function providerError(message, code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
 export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) {
   if (process.env.IMAGE_GENERATION_MODE === "validate") {
     imageProviderLog("validate_image_returned", { size });
@@ -37,33 +43,45 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
   }
 
   if (process.env.IMAGE_GENERATION_MODE !== "live") {
-    throw new Error("Image generation is disabled.");
+    throw providerError("Image generation is disabled.", "IMAGE_PROVIDER_DISABLED");
   }
 
   if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured.");
+    throw providerError("GEMINI_API_KEY is not configured.", "IMAGE_PROVIDER_CONFIG");
   }
 
   const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+  const timeoutMs = Number(process.env.IMAGE_PROVIDER_TIMEOUT_MS || 50000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   imageProviderLog("gemini_request_start", {
     mode: process.env.IMAGE_GENERATION_MODE,
     model,
     size,
     promptLength: String(prompt || "").length
   });
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": process.env.GEMINI_API_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"]
-      }
-    })
-  });
+  let response;
+  try {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: {
+        "x-goog-api-key": process.env.GEMINI_API_KEY,
+        "Content-Type": "application/json"
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"]
+        }
+      })
+    });
+  } catch (error) {
+    if (error.name === "AbortError") throw providerError("Image provider request timed out.", "IMAGE_PROVIDER_TIMEOUT");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const data = await response.json();
   imageProviderLog("gemini_http_response", {
@@ -73,7 +91,7 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
     hasCandidates: Boolean(data.candidates?.length)
   });
   if (!response.ok) {
-    throw new Error(data.error?.message || "Image generation failed.");
+    throw providerError(data.error?.message || "Image generation failed.", "IMAGE_PROVIDER_FAILED");
   }
 
   const parts = data.candidates?.[0]?.content?.parts || [];
@@ -86,5 +104,5 @@ export async function generateOpenAIRecipeImage({ prompt, size = "1024x1024" }) 
     imageBytes: imageData ? Buffer.byteLength(imageData, "base64") : 0
   });
   if (imageData) return Buffer.from(imageData, "base64");
-  throw new Error("Image response did not include image data.");
+  throw providerError("Image response did not include image data.", "IMAGE_PROVIDER_INVALID_RESPONSE");
 }

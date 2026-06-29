@@ -20,7 +20,8 @@ function safeClientId(clientId) {
 }
 
 function limitMessage(limit) {
-  return `Limite temporário de imagem atingido (${limit.limit}/${limit.period}). O contador permanece protegido; tente novamente após liberar o contador de teste ou no próximo período.`;
+  const period = limit.period === "week" ? "semana" : "dia";
+  return `Limite de imagem atingido para este ${period}. Tente novamente no próximo ${period}.`;
 }
 
 function sendJson(res, response, status = 200) {
@@ -262,13 +263,27 @@ export default async function handler(request, response) {
     if (error.code === "IMAGE_REQUEST_IN_PROGRESS") {
       return sendJson(response, {
         status: "request_in_progress",
-        message: "Imagem em preparo",
+        message: "A imagem do prato já está em preparo. Aguarde alguns instantes antes de tentar novamente.",
         images: []
       }, 409);
     }
+    if (error.code === "IMAGE_PROVIDER_TIMEOUT") {
+      return sendJson(response, {
+        status: "timeout",
+        message: "A geração da imagem demorou mais que o esperado. Tente novamente em instantes.",
+        error: "Image provider timeout."
+      }, 504);
+    }
+    if (String(error.code || "").startsWith("IMAGE_PROVIDER_")) {
+      return sendJson(response, {
+        status: "provider_failed",
+        message: "Não foi possível gerar a imagem do prato agora. Tente novamente em instantes.",
+        error: "Image provider unavailable."
+      }, 502);
+    }
     return sendJson(response, {
       status: "failed",
-      message: "Imagem em preparo",
+      message: "Não foi possível concluir a geração da imagem agora. Tente novamente em instantes.",
       error: "Image generation temporarily unavailable."
     }, 500);
   }

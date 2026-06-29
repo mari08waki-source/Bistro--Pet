@@ -108,7 +108,7 @@ test("atomic store commands enforce distributed limits and locks", async () => {
     assert.equal(firstLimit.allowed, true);
     assert.equal(secondLimit.allowed, false);
     const refundedCount = await refundImageLimit({ generationType: "chefSuggestion", clientId: "atomic-client" });
-    assert.equal(refundedCount, 1);
+    assert.equal(refundedCount, 0);
 
     let release;
     const pending = new Promise(resolve => {
@@ -121,6 +121,36 @@ test("atomic store commands enforce distributed limits and locks", async () => {
     );
     release("done");
     assert.equal(await firstLock, "done");
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  }
+});
+
+test("lock release failures do not override a completed image request", async () => {
+  const originalFetch = globalThis.fetch;
+  process.env.UPSTASH_REDIS_REST_URL = "https://atomic-store.test";
+  process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
+  delete process.env.IMAGE_LOCK_STORAGE;
+
+  globalThis.fetch = async (_url, options) => {
+    const [command] = JSON.parse(options.body);
+    if (command === "SET") {
+      return new Response(JSON.stringify({ result: "OK" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return new Response(JSON.stringify({ error: "release failed" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  };
+
+  try {
+    const result = await withImageRequestLock("atomic-client:customRecipe", async () => "image-ready");
+    assert.equal(result, "image-ready");
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.UPSTASH_REDIS_REST_URL;
@@ -212,6 +242,15 @@ test("handler applies one daily request per individual generation type", async (
   });
   assert.equal(second.statusCode, 429);
   assert.equal(second.body.status, "limit_exceeded");
+  assert.equal(second.body.limit.retryAfterSeconds > 0, true);
+
+  const third = await callHandler({
+    generationType: "customRecipe",
+    userId: "test-user",
+    recipe: { id: "free", recipeName: "Mais uma", ingredients: ["Inhame"] }
+  });
+  assert.equal(third.statusCode, 429);
+  assert.equal(third.body.status, "limit_exceeded");
 });
 
 test("failed image generation refunds the consumed image counter", async () => {
@@ -226,7 +265,8 @@ test("failed image generation refunds the consumed image counter", async () => {
     userId: "refund-user",
     recipe: { id: "failed", recipeName: "Teste falha", ingredients: ["Arroz"] }
   });
-  assert.equal(failed.statusCode, 500);
+  assert.equal(failed.statusCode, 502);
+  assert.equal(failed.body.status, "provider_failed");
 
   process.env.IMAGE_GENERATION_MODE = "validate";
   const retry = await callHandler({

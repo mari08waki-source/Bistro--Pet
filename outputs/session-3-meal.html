@@ -886,6 +886,10 @@
         return "chefSuggestion";
       }
 
+      function showImageError(message) {
+        alert(message || "Não foi possível carregar a imagem do prato agora. A receita em texto foi mantida.");
+      }
+
       async function generateRecipeImage(recipe) {
         const photo = document.getElementById("mealPhoto");
         const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -893,7 +897,10 @@
         photo.dataset.imageRequestId = requestId;
         photo.hidden = true;
         photo.removeAttribute("src");
-        if (!imageEndpoint) return;
+        if (!imageEndpoint) {
+          showImageError("A imagem do prato não está disponível neste modo de visualização.");
+          return;
+        }
         try {
           const response = await fetch(imageEndpoint, {
             method: "POST",
@@ -910,7 +917,9 @@
           });
           const data = await response.json();
           const image = data.images && data.images[0];
-          if (photo.dataset.imageRequestId !== requestId || !response.ok || !image || !image.imageUrl) return;
+          if (photo.dataset.imageRequestId !== requestId) return;
+          if (!response.ok) throw new Error(data.message || "Não foi possível gerar a imagem do prato agora.");
+          if (!image || !image.imageUrl) throw new Error("A imagem do prato não foi retornada corretamente.");
           recipe.image = image.imageUrl;
           photo.src = image.imageUrl;
           photo.hidden = false;
@@ -920,18 +929,14 @@
             photo.hidden = true;
             photo.removeAttribute("src");
           }
+          showImageError(error.message);
         }
       }
 
       document.getElementById("mealPhoto").addEventListener("error", event => {
-        if (currentGeneratedRecipe && currentGeneratedRecipe.mode === "chef" && currentGeneratedRecipe._generationId && !event.currentTarget.dataset.chefImageRetry) {
-          event.currentTarget.dataset.chefImageRetry = "1";
-          currentGeneratedRecipe.image = "";
-          generateRecipeImage(currentGeneratedRecipe);
-          return;
-        }
         event.currentTarget.hidden = true;
         event.currentTarget.removeAttribute("src");
+        showImageError("A imagem do prato não carregou corretamente. A receita em texto foi mantida.");
       });
 
       function renderRecipe(recipe) {
@@ -944,7 +949,6 @@
         document.getElementById("resultIngredients").innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(displayIngredientWithPortion(item))}</li>`).join("");
         document.getElementById("prepSteps").innerHTML = recipe.steps.map(item => `<p>${escapeHtml(item)}</p>`).join("");
         const photo = document.getElementById("mealPhoto");
-        delete photo.dataset.chefImageRetry;
         photo.hidden = !recipe.image;
         if (recipe.image) photo.src = recipe.image;
         else photo.removeAttribute("src");
@@ -1004,11 +1008,6 @@
         if (window.BistroPetStorage && window.BistroPetStorage.recipeUsageStatus) {
           const usage = await window.BistroPetStorage.recipeUsageStatus(activeRecipeMode);
           if (!usage.allowed) {
-            if (activeRecipeMode === "chef" && usage.existingRecipe) {
-              renderRecipe(usage.existingRecipe);
-              if (!usage.existingRecipe.image) generateRecipeImage(usage.existingRecipe);
-              return;
-            }
             showWarning(activeRecipeMode, usage.message || "O limite deste período já foi usado para este pet.");
             resetRecipeCard();
             return;
