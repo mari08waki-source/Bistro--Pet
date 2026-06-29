@@ -189,6 +189,7 @@
               <div class="chef-preview">
                 O chef cria uma sugestão simples com nome da receita, ingredientes e modo de preparo.
               </div>
+              <div class="mode-warning" id="chefWarning"></div>
             </div>
           </div>
 
@@ -327,6 +328,7 @@
       const specialTags = document.getElementById("specialIngredientTags");
       const restrictionList = document.getElementById("restrictionList");
       const customWarning = document.getElementById("customWarning");
+      const chefWarning = document.getElementById("chefWarning");
       const recipeHistoryPanel = document.getElementById("recipeHistoryPanel");
       const recipeHistoryList = document.getElementById("recipeHistoryList");
       const recipeHistoryDetail = document.getElementById("recipeHistoryDetail");
@@ -570,11 +572,13 @@
       }
 
       function showWarning(mode, message) {
-        customWarning.textContent = message;
+        const target = mode === "chef" ? chefWarning : customWarning;
+        target.textContent = message;
       }
 
       function clearWarnings() {
         customWarning.textContent = "";
+        chefWarning.textContent = "";
       }
 
       function addItems({ input, listName, warningMode }) {
