@@ -29,8 +29,14 @@
       #weeklyPlanner .weekly-image-action { margin-top: 10px; }
       #weeklyPlanner .weekly-image-action button { width: 100%; min-height: 36px; border: 1px solid rgba(196, 145, 53, 0.24); border-radius: 999px; background: rgba(255, 248, 232, 0.86); color: #76551f; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; cursor: pointer; }
       #weeklyPlanner .weekly-image-action button:disabled { cursor: wait; opacity: 0.7; }
-      #weeklyPlanner.is-custom-mode .weekly-controls { background: linear-gradient(180deg, rgba(255, 248, 232, 0.96), rgba(244, 224, 184, 0.82)); border-color: rgba(196, 145, 53, 0.26); }
-      #weeklyPlanner.is-custom-mode .kitchen-switch[for="weeklyCustom"] { background: rgba(234, 216, 180, 0.82); color: #76551f; }
+      .weekly-heading .kitchen-switches { display: flex; gap: 7px; overflow: hidden; }
+      .weekly-heading .kitchen-switch { display: block; flex: 1 1 0; min-width: 0; padding: 9px 8px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 253, 248, 0.76); color: var(--muted); text-align: center; box-shadow: 0 10px 28px rgba(57, 67, 51, 0.07); font-size: 11px; line-height: 1.15; white-space: normal; }
+      .weekly-heading .kitchen-switch span { color: inherit; font-size: inherit; font-weight: 400; letter-spacing: 0; }
+      .weekly-heading .kitchen-switch i { display: none; }
+      #weeklyAuto:checked ~ .kitchen-switches label[for="weeklyAuto"],
+      #weeklyCustom:checked ~ .kitchen-switches label[for="weeklyCustom"] { border-color: rgba(85, 106, 84, 0.28); background: var(--sage-dark); color: var(--paper); }
+      #weeklyPlanner .weekly-controls { padding-bottom: 6px; border-bottom-color: rgba(46, 51, 43, 0.035); }
+      #weeklyPlanner.is-custom-mode .weekly-controls { background: rgba(255, 253, 248, 0.78); border-color: rgba(46, 51, 43, 0.035); }
 	      #weeklyPlanner .weekly-audio-actions { margin-top: 10px; }
 	      #weeklyPlanner:not(.is-generated) .weekly-audio-actions { display: none; }
 	      #weeklyPlanner .ingredient-list ul { grid-template-columns: minmax(0, 1fr); }
@@ -38,10 +44,13 @@
       .weekly-user-card { grid-template-columns: 72px 1fr auto; }
       .weekly-logout { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--sage-dark); cursor: pointer; }
       .weekly-logout svg { width: 17px; height: 17px; }
-      .profile-edit-card { min-height: 44px; display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 253, 248, 0.78); color: var(--sage-dark); text-decoration: none; }
-      .profile-edit-card svg { width: 18px; height: 18px; }
-      .profile-edit-card strong { font-size: 12px; }
-      .profile-edit-arrow { font-size: 20px; line-height: 1; }
+      .create-week-plan,
+      .profile-edit-card { min-height: 41px; padding: 0 20px; border-radius: 999px; font-size: 14px; font-weight: 800; box-shadow: 0 12px 26px rgba(85, 106, 84, 0.2); }
+      .profile-edit-card { display: grid; place-items: center; border: 0; background: var(--sage-dark); color: var(--paper); text-align: center; text-decoration: none; }
+      .profile-edit-card svg,
+      .profile-edit-arrow { display: none; }
+      .profile-edit-card strong { color: inherit; font-size: inherit; font-weight: inherit; }
+      #weeklyPlanner .weekly-empty-message { min-height: 124px; }
       .logout-dialog { width: min(calc(100vw - 32px), 330px); padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 253, 248, 0.98); color: var(--ink); box-shadow: 0 28px 70px rgba(22, 27, 21, 0.28); }
       .logout-dialog::backdrop { background: rgba(31, 37, 29, 0.46); }
       .logout-dialog p { margin: 0 0 18px; text-align: center; }
@@ -70,25 +79,25 @@
       <section class="bistro-menu weekly-heading">
         <p class="meal-eyebrow">Menu Bistro</p>
         <h1>O chef vai organizar a semana da Luna.</h1>
+        <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyAuto" checked />
+        <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyCustom" />
+
+        <div class="kitchen-switches" aria-label="Modos do plano semanal">
+          <label class="kitchen-switch" for="weeklyAuto">
+            <span>Sugestão do Chefe</span>
+            <i aria-hidden="true"></i>
+          </label>
+          <label class="kitchen-switch" for="weeklyCustom">
+            <span>Personalizado</span>
+            <i aria-hidden="true"></i>
+          </label>
+        </div>
       </section>
 
       <section class="weekly-planner" id="weeklyPlanner">
         <div class="weekly-controls">
-          <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyAuto" checked />
-          <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyCustom" />
 
-          <div class="kitchen-switches" aria-label="Modos do plano semanal">
-            <label class="kitchen-switch" for="weeklyAuto">
-              <span>Modo Automático</span>
-              <i aria-hidden="true"></i>
-            </label>
-            <label class="kitchen-switch" for="weeklyCustom">
-              <span>Modo Personalizado</span>
-              <i aria-hidden="true"></i>
-            </label>
-          </div>
-
-          <button class="primary full create-week-plan" type="button" id="createWeekPlan">Criar plano da semana</button>
+          <button class="primary full create-week-plan" type="button" id="createWeekPlan">Plano semanal</button>
           <a class="profile-edit-card" href="./session-2-pet-profile.html?edit=1">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="8" r="3" />
@@ -830,7 +839,7 @@
         }
         activeWeeklyMode = nextMode;
         weeklyPlanner.classList.toggle("is-custom-mode", customMode);
-        createWeekPlanButton.textContent = "Criar plano da semana";
+        createWeekPlanButton.textContent = "Plano semanal";
       }
 
       function isSavedPlanValid(plan, profile) {
