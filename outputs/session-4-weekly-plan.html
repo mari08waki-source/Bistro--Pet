@@ -211,9 +211,8 @@
         const imageActionMarkup = dayIndex === null ? "" : `
           <div class="weekly-image-action">
             <button type="button" data-weekly-image-index="${dayIndex}" ${weeklyImageLoadingIndex === dayIndex ? "disabled" : ""} aria-label="Ver imagem do prato de ${day}">
-              ${weeklyImageLoadingIndex === dayIndex ? "📷 Preparando imagem" : "📷 Ver imagem do prato"}
+              ${weeklyImageLoadingIndex === dayIndex ? "📷 Preparando imagem" : imageIsVisible ? "Fechar imagem" : "📷 Ver imagem do prato"}
             </button>
-            ${imageIsVisible ? `<button type="button" data-weekly-image-close="${dayIndex}" aria-label="Fechar imagem do prato de ${day}">Fechar imagem</button>` : ""}
           </div>
         `;
         const detailMarkup = details && Array.isArray(details.ingredients) ? `
@@ -737,7 +736,11 @@
         const recipe = currentPlan[dayIndex];
         if (!recipe) return;
         if (hasWeeklyDishImage(recipe.image)) {
-          weeklyVisibleImageIndexes.add(dayIndex);
+          if (weeklyVisibleImageIndexes.has(dayIndex)) {
+            weeklyVisibleImageIndexes.delete(dayIndex);
+          } else {
+            weeklyVisibleImageIndexes.add(dayIndex);
+          }
           renderProfileWeeklyPlan(currentPlan);
           return;
         }
@@ -835,14 +838,7 @@
 	            generateWeeklyDayImage(dayIndex);
 	          });
 	        });
-	        weeklyDays.querySelectorAll("[data-weekly-image-close]").forEach(button => {
-	          button.addEventListener("click", event => {
-	            event.stopPropagation();
-	            const dayIndex = Number(button.dataset.weeklyImageClose);
-	            weeklyVisibleImageIndexes.delete(dayIndex);
-	            renderProfileWeeklyPlan(currentPlan);
-	          });
-	        });
+
         weeklyPlanner.classList.add("is-generated");
       }
 
