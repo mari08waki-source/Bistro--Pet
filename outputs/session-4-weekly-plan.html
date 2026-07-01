@@ -24,8 +24,10 @@
       #weeklyPlanner .day-tab { border: 1px solid rgba(46, 51, 43, 0.13); background: rgba(255, 253, 248, 0.72); border-radius: 999px; padding: 7px 0; font-size: 11px; color: var(--sage-dark); }
       #weeklyPlanner .day-tab.active { background: #f0eadf; color: var(--ink); }
       #weeklyPlanner .selected-day-recipe { margin-top: 12px; }
-      #weeklyPlanner .selected-day-recipe .week-day-card { grid-template-columns: 68px 1fr; }
+      #weeklyPlanner .selected-day-recipe .week-day-card { grid-template-columns: 1fr; }
+      #weeklyPlanner .selected-day-recipe .week-day-card.has-dish-image { grid-template-columns: 68px 1fr; }
       #weeklyPlanner .selected-day-recipe .week-day-card img { width: 68px; height: 58px; }
+      #weeklyPlanner .selected-day-recipe .week-day-card:not(.has-dish-image) img { display: none; }
       #weeklyPlanner .weekly-image-action { margin-top: 10px; }
       #weeklyPlanner .weekly-image-action button { width: 100%; min-height: 36px; border: 1px solid rgba(196, 145, 53, 0.24); border-radius: 999px; background: rgba(255, 248, 232, 0.86); color: #76551f; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; cursor: pointer; }
       #weeklyPlanner .weekly-image-action button:disabled { cursor: wait; opacity: 0.7; }
@@ -156,6 +158,7 @@
       let activeDayIndex = null;
       let activeWeeklyMode = "auto";
       let weeklyImageLoadingIndex = null;
+      const weeklyVisibleImageIndexes = new Set();
       const imagePreparingSrc = "./recipe-weekly-neutral-photo.png";
       const imageEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-recipe-image";
 
@@ -197,6 +200,10 @@
       }
 
       function createDayCard(day, title, image, details, open = false, dayIndex = null) {
+        const imageIsVisible = dayIndex !== null && weeklyVisibleImageIndexes.has(dayIndex) && hasWeeklyDishImage(image);
+        const imageMarkup = imageIsVisible
+          ? `<img src="${image}" alt="${title}" loading="lazy" onerror="this.remove();alert('A imagem do prato não carregou corretamente. O plano em texto foi mantido.')" />`
+          : "";
         const preparationSteps = String(details && details.prep || "")
           .split(/(?<=[.!?])\s+/)
           .map(step => step.trim())
@@ -206,6 +213,7 @@
             <button type="button" data-weekly-image-index="${dayIndex}" ${weeklyImageLoadingIndex === dayIndex ? "disabled" : ""} aria-label="Ver imagem do prato de ${day}">
               ${weeklyImageLoadingIndex === dayIndex ? "📷 Preparando imagem" : "📷 Ver imagem do prato"}
             </button>
+            ${imageIsVisible ? `<button type="button" data-weekly-image-close="${dayIndex}" aria-label="Fechar imagem do prato de ${day}">Fechar imagem</button>` : ""}
           </div>
         `;
         const detailMarkup = details && Array.isArray(details.ingredients) ? `
@@ -221,8 +229,8 @@
           </div>
         ` : "";
         return `
-	          <article class="week-day-card" role="button" tabindex="0" data-expandable-day aria-expanded="${open ? "true" : "false"}" aria-label="${day}: ${title}">
-            <img src="${image || imagePreparingSrc}" alt="${title}" onerror="this.onerror=null;this.src='./recipe-weekly-neutral-photo.png';alert('A imagem do prato não carregou corretamente. O plano em texto foi mantido.')" />
+	          <article class="week-day-card${imageIsVisible ? " has-dish-image" : ""}" role="button" tabindex="0" data-expandable-day aria-expanded="${open ? "true" : "false"}" aria-label="${day}: ${title}">
+            ${imageMarkup}
             <div>
               <strong>${day}</strong>
               <span>${title}</span>
@@ -289,7 +297,7 @@
       }
 
       function imageForRecipe(recipe, index) {
-        return imagePreparingSrc;
+        return null;
       }
 
       function splitList(value) {
@@ -727,7 +735,12 @@
         }
         if (weeklyImageLoadingIndex !== null) return;
         const recipe = currentPlan[dayIndex];
-        if (!recipe || hasWeeklyDishImage(recipe.image)) return;
+        if (!recipe) return;
+        if (hasWeeklyDishImage(recipe.image)) {
+          weeklyVisibleImageIndexes.add(dayIndex);
+          renderProfileWeeklyPlan(currentPlan);
+          return;
+        }
         weeklyImageLoadingIndex = dayIndex;
         renderProfileWeeklyPlan(currentPlan);
         try {
@@ -750,6 +763,7 @@
           if (!image || !image.imageUrl) throw new Error("A imagem do prato não foi retornada corretamente.");
           if (image && image.imageUrl && currentPlan[dayIndex]) {
             currentPlan[dayIndex].image = image.imageUrl;
+            weeklyVisibleImageIndexes.add(dayIndex);
             if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
           }
         } catch (error) {
@@ -764,6 +778,7 @@
 	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
         currentPlan = [];
         activeDayIndex = null;
+        weeklyVisibleImageIndexes.clear();
         weeklyDays.innerHTML = "";
         weeklyPlanner.classList.remove("is-generated");
         if (window.BistroPetStorage && window.BistroPetStorage.saveWeeklyPlan) {
@@ -790,7 +805,7 @@
               ${createDayCard(
                 currentPlan[activeDayIndex].day,
                 currentPlan[activeDayIndex].title,
-                currentPlan[activeDayIndex].image,
+                weeklyVisibleImageIndexes.has(activeDayIndex) ? currentPlan[activeDayIndex].image : null,
                 currentPlan[activeDayIndex],
                 true,
                 activeDayIndex
@@ -818,6 +833,14 @@
 	            event.stopPropagation();
 	            const dayIndex = Number(button.dataset.weeklyImageIndex);
 	            generateWeeklyDayImage(dayIndex);
+	          });
+	        });
+	        weeklyDays.querySelectorAll("[data-weekly-image-close]").forEach(button => {
+	          button.addEventListener("click", event => {
+	            event.stopPropagation();
+	            const dayIndex = Number(button.dataset.weeklyImageClose);
+	            weeklyVisibleImageIndexes.delete(dayIndex);
+	            renderProfileWeeklyPlan(currentPlan);
 	          });
 	        });
         weeklyPlanner.classList.add("is-generated");
