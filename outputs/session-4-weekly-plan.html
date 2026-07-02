@@ -25,9 +25,8 @@
       #weeklyPlanner .day-tab.active { background: #f0eadf; color: var(--ink); }
       #weeklyPlanner .selected-day-recipe { margin-top: 12px; }
       #weeklyPlanner .selected-day-recipe .week-day-card { grid-template-columns: 1fr; }
-      #weeklyPlanner .selected-day-recipe .week-day-card.has-dish-image { grid-template-columns: 68px 1fr; }
-      #weeklyPlanner .selected-day-recipe .week-day-card img { width: 68px; height: 58px; }
-      #weeklyPlanner .selected-day-recipe .week-day-card:not(.has-dish-image) img { display: none; }
+      #weeklyPlanner .weekly-dish-card { display: grid; place-items: center; margin-top: 10px; padding: 8px; border: 1px solid rgba(46, 51, 43, 0.09); border-radius: 8px; background: rgba(255, 250, 240, 0.76); }
+      #weeklyPlanner .weekly-dish-card img { width: 100%; max-width: 260px; height: auto; max-height: 220px; object-fit: cover; object-position: 50% 54%; border-radius: 7px; }
       #weeklyPlanner .weekly-image-action { margin-top: 10px; }
       #weeklyPlanner .weekly-image-action button { width: 100%; min-height: 36px; border: 1px solid rgba(196, 145, 53, 0.24); border-radius: 999px; background: rgba(255, 248, 232, 0.86); color: #76551f; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.01em; cursor: pointer; }
       #weeklyPlanner .weekly-image-action button:disabled { cursor: wait; opacity: 0.7; }
@@ -202,7 +201,7 @@
       function createDayCard(day, title, image, details, open = false, dayIndex = null) {
         const imageIsVisible = dayIndex !== null && weeklyVisibleImageIndexes.has(dayIndex) && hasWeeklyDishImage(image);
         const imageMarkup = imageIsVisible
-          ? `<img src="${image}" alt="${title}" loading="lazy" onerror="this.remove();alert('A imagem do prato não carregou corretamente. O plano em texto foi mantido.')" />`
+          ? `<div class="weekly-dish-card"><img src="${image}" alt="${title}" loading="lazy" onerror="this.closest('.weekly-dish-card')?.remove();alert('A imagem do prato não carregou corretamente. O plano em texto foi mantido.')" /></div>`
           : "";
         const preparationSteps = String(details && details.prep || "")
           .split(/(?<=[.!?])\s+/)
@@ -228,12 +227,12 @@
           </div>
         ` : "";
         return `
-	          <article class="week-day-card${imageIsVisible ? " has-dish-image" : ""}" role="button" tabindex="0" data-expandable-day aria-expanded="${open ? "true" : "false"}" aria-label="${day}: ${title}">
-            ${imageMarkup}
+          <article class="week-day-card" role="button" tabindex="0" data-expandable-day aria-expanded="${open ? "true" : "false"}" aria-label="${day}: ${title}">
             <div>
               <strong>${day}</strong>
               <span>${title}</span>
               ${imageActionMarkup}
+              ${imageMarkup}
               ${detailMarkup}
             </div>
           </article>
