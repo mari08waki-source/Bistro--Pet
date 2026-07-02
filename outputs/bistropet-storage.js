@@ -299,7 +299,7 @@
     if (mode === "personalizada") {
       const { data, error } = await client
         .from("recipe_generations")
-        .select("id, created_at")
+        .select("*")
         .eq("user_id", cache.user.id)
         .eq("pet_profile_id", cache.profileId)
         .eq("recipe_type", "personalizada")
@@ -308,10 +308,13 @@
         .limit(1)
         .maybeSingle();
       if (error) throw error;
+      const hasCompletedImage = Boolean(data?.image_url);
       return {
         allowed: true,
         period: "week",
         existingId: data?.id || null,
+        completeImageOnly: Boolean(data && !hasCompletedImage),
+        existingRecipe: data ? recipeFromGeneration(data) : null,
         replaceExisting: Boolean(data)
       };
     }

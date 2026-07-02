@@ -1062,8 +1062,15 @@
             return;
           }
         }
+        if (usage?.existingRecipe) {
+          renderRecipe(usage.existingRecipe);
+          if (!usage.existingRecipe.image) {
+            generateRecipeImage(usage.existingRecipe);
+          }
+          return;
+        }
         const recipe = buildRecipe(activeRecipeMode);
-        if (activeRecipeMode === "chef" && usage?.existingId) {
+        if (["chef", "personalizada"].includes(activeRecipeMode) && usage?.existingId) {
           recipe._generationId = usage.existingId;
         }
         if (!recipe.ingredients.length) {
