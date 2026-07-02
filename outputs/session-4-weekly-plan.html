@@ -897,7 +897,11 @@
       }
       document.getElementById("weeklyAuto").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
       document.getElementById("weeklyCustom").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
-	      createWeekPlanButton.addEventListener("click", () => generateProfileWeeklyPlan().catch(error => alert(error.message || "Não foi possível salvar o plano.")));
+	      createWeekPlanButton.addEventListener("click", () => {
+	        const planIsOpen = weeklyPlanner.classList.contains("is-generated");
+	        const action = planIsOpen ? clearWeeklyPlanState(false) : generateProfileWeeklyPlan();
+	        action.catch(error => alert(error.message || "Não foi possível salvar o plano."));
+	      });
 	      document.getElementById("listenWeeklyPlan").addEventListener("click", () => {
 	        if (activeDayIndex !== null && currentPlan[activeDayIndex] && window.BistroPetAccessibility) {
 	          window.BistroPetAccessibility.speakWeeklyDay(currentPlan[activeDayIndex]);
