@@ -1049,15 +1049,23 @@
         renderState();
         setRecipeOptionsOpen(false);
         setForbiddenFoodsOpen(false);
+        let usage = null;
         if (window.BistroPetStorage && window.BistroPetStorage.recipeUsageStatus) {
-          const usage = await window.BistroPetStorage.recipeUsageStatus(activeRecipeMode);
+          usage = await window.BistroPetStorage.recipeUsageStatus(activeRecipeMode);
           if (!usage.allowed) {
+            if (activeRecipeMode === "chef" && usage.existingRecipe) {
+              renderRecipe(usage.existingRecipe);
+              return;
+            }
             showWarning(activeRecipeMode, usage.message || "O limite deste período já foi usado para este pet.");
             resetRecipeCard();
             return;
           }
         }
         const recipe = buildRecipe(activeRecipeMode);
+        if (activeRecipeMode === "chef" && usage?.existingId) {
+          recipe._generationId = usage.existingId;
+        }
         if (!recipe.ingredients.length) {
           showWarning(activeRecipeMode, "Todos os ingredientes disponíveis foram bloqueados. Remova um alimento proibido para gerar a receita.");
           resetRecipeCard();

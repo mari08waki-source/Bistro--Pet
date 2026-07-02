@@ -277,7 +277,7 @@
     if (mode === "chef") {
       const { data, error } = await client
         .from("recipe_generations")
-        .select("id, created_at")
+        .select("*")
         .eq("user_id", cache.user.id)
         .eq("pet_profile_id", cache.profileId)
         .eq("recipe_type", "chef")
@@ -286,10 +286,13 @@
         .limit(1)
         .maybeSingle();
       if (error) throw error;
+      const hasCompletedImage = Boolean(data?.image_url);
       return {
-        allowed: !data,
+        allowed: !data || !hasCompletedImage,
         period: "day",
         existingId: data?.id || null,
+        completeImageOnly: Boolean(data && !hasCompletedImage),
+        existingRecipe: hasCompletedImage ? recipeFromGeneration(data) : null,
         message: data ? "A sugestão do Chefe de hoje já foi criada para este pet." : ""
       };
     }
@@ -393,7 +396,7 @@
       updated_at: new Date().toISOString()
     };
     let result;
-    const generationId = recipe._generationId || (recipe.mode === "personalizada" ? usage.existingId : null);
+    const generationId = recipe._generationId || (["personalizada", "chef"].includes(recipe.mode) ? usage.existingId : null);
     if (generationId) {
       result = await client.from("recipe_generations").update(payload).eq("id", generationId).eq("user_id", cache.user.id).select("*").single();
     } else {
