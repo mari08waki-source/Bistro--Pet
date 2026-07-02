@@ -707,7 +707,8 @@
       }
 
       function completePersonalizedIngredients() {
-        return uniqueItems(specialIngredients.map(simpleIngredientName)).filter(item => !isPersonalizedBlocked(item));
+        const menu = chefMenus[(recipeIndex + 1) % chefMenus.length];
+        return uniqueItems(safeItems(menu.ingredients.map(simpleIngredientName))).filter(item => !isPersonalizedBlocked(item));
       }
 
       function chefIngredients() {
@@ -1037,7 +1038,7 @@
         });
         document.getElementById("modePanelTitle").textContent = modeCopy[mode].title;
         document.getElementById("modePanelCopy").textContent = modeCopy[mode].help;
-        document.getElementById("createRecipe").textContent = mode === "chef" ? "Gerar sugestão do Chefe" : "Criar receita";
+        document.getElementById("createRecipe").textContent = "Criar receita";
         clearWarnings();
         resetRecipeCard();
       }
@@ -1046,16 +1047,8 @@
         clearWarnings();
         syncRestrictionsFromProfile();
         renderState();
-
-        if (activeRecipeMode === "personalizada" && restrictedInput.value.trim()) {
-          await addBlockedItems(restrictedInput);
-        }
-        if (activeRecipeMode === "personalizada" && !specialIngredients.length) {
-          setRecipeOptionsOpen(true);
-          showWarning(activeRecipeMode, "Adicione ao menos um ingrediente especial para criar a receita.");
-          resetRecipeCard();
-          return;
-        }
+        setRecipeOptionsOpen(false);
+        setForbiddenFoodsOpen(false);
         if (window.BistroPetStorage && window.BistroPetStorage.recipeUsageStatus) {
           const usage = await window.BistroPetStorage.recipeUsageStatus(activeRecipeMode);
           if (!usage.allowed) {
@@ -1119,12 +1112,9 @@
       document.querySelectorAll(".mode-pill").forEach(button => {
         button.addEventListener("click", () => {
           const requestedMode = button.dataset.mode;
-          const wasOpen = recipeOptionsPanel.classList.contains("is-open");
-          const wasSameMode = activeRecipeMode === requestedMode;
           setMode(requestedMode);
-          if (requestedMode === "personalizada") {
-            setRecipeOptionsOpen(wasSameMode ? !wasOpen : true);
-          }
+          setRecipeOptionsOpen(false);
+          setForbiddenFoodsOpen(false);
         });
       });
       toggleForbiddenFoods.addEventListener("click", () => {
