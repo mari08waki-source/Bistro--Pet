@@ -292,7 +292,7 @@
         period: "day",
         existingId: data?.id || null,
         completeImageOnly: Boolean(data && !hasCompletedImage),
-        existingRecipe: hasCompletedImage ? recipeFromGeneration(data) : null,
+        existingRecipe: data ? recipeFromGeneration(data) : null,
         message: data ? "A sugestão do Chefe de hoje já foi criada para este pet." : ""
       };
     }
