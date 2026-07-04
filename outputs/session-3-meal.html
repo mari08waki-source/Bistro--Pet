@@ -184,47 +184,15 @@
         <h1>Hoje vamos criar algo especial para Luna.</h1>
 
         <div class="recipe-modes" aria-label="Modo de receita">
-          <button class="mode-pill active" type="button" data-mode="personalizada">Personalizada</button>
-          <button class="mode-pill" type="button" data-mode="chef">Sugestão do Chefe</button>
+          <button class="mode-pill active" type="button" data-mode="chef">Sugestão do Chefe</button>
         </div>
       </section>
 
       <section class="intelligent-kitchen" id="intelligentKitchen">
         <div class="generator-modes">
-          <div class="kitchen-ingredients" id="recipeOptionsPanel">
-            <span id="modePanelTitle">Personalizada</span>
-            <small id="modePanelCopy"></small>
+          <div class="mode-warning" id="chefWarning"></div>
 
-            <div class="mode-panel active" data-panel="personalizada" id="personalizedOptionsPanel">
-              <label for="specialIngredients">
-                Ingredientes
-                <div class="ingredient-entry">
-                  <input id="specialIngredients" type="text" placeholder="Digite ingredientes importantes para Luna" />
-                  <button id="addSpecialIngredient" type="button">Adicionar</button>
-                </div>
-              </label>
-              <div class="restriction-list" id="specialIngredientTags"></div>
-              <button class="forbidden-toggle" id="toggleForbiddenFoods" type="button" aria-expanded="false" aria-controls="forbiddenFoodsCard">Alimentos proibidos</button>
-              <label class="forbidden-card" id="forbiddenFoodsCard" for="restrictedFoods" hidden>
-                Alimentos proibidos
-                <div class="ingredient-entry">
-                  <input id="restrictedFoods" type="text" placeholder="Digite um alimento proibido" />
-                  <button id="addBlockedIngredient" type="button">Adicionar</button>
-                </div>
-              </label>
-              <div class="restriction-list" id="restrictionList"></div>
-              <div class="mode-warning" id="customWarning"></div>
-            </div>
-
-            <div class="mode-panel" data-panel="chef">
-              <div class="chef-preview">
-                O chef cria uma sugestão simples com nome da receita, ingredientes e modo de preparo.
-              </div>
-              <div class="mode-warning" id="chefWarning"></div>
-            </div>
-          </div>
-
-          <button class="primary full create-chef-recipe" type="button" id="createRecipe">Criar receita</button>
+          <button class="primary full create-chef-recipe" type="button" id="createRecipe">Receita do Dia</button>
           <button class="primary full create-chef-recipe" type="button" id="openWeeklyPlan">Plano semanal</button>
         </div>
 
@@ -283,6 +251,7 @@
 	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
 	    <script src="./bistropet-supabase.js"></script>
 	    <script src="./bistropet-storage.js?v=supabase-recipes"></script>
+	    <script src="./bistropet-image-service.js"></script>
 	    <script src="./bistropet-accessibility.js?v=tts-natural-ingredients"></script>
     <script>
       (async function () {
@@ -331,10 +300,8 @@
         special: "bistropet:session3:special",
         blocked: "bistropet:session3:blocked"
       };
-      const imageEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-recipe-image";
-
       const profile = window.BistroPetStorage ? window.BistroPetStorage.getPetProfile() : {};
-      let activeRecipeMode = "personalizada";
+      let activeRecipeMode = "chef";
       let recipeIndex = Number(window.sessionStorage.getItem("bistropet:session3:index") || 0);
       let currentGeneratedRecipe = null;
       let specialIngredients = [];
@@ -580,6 +547,7 @@
       }
 
       function renderTags(container, items, type, isBlockedTag = false) {
+        if (!container) return;
         container.innerHTML = items.map(item => `
           <span class="restriction-chip${isBlockedTag ? "" : " special-chip"}">
             ${escapeHtml(item)}
@@ -595,31 +563,34 @@
 
       function clearPersonalizedRecipeInputs() {
         specialIngredients = [];
-        specialInput.value = "";
-        restrictedInput.value = "";
+        if (specialInput) specialInput.value = "";
+        if (restrictedInput) restrictedInput.value = "";
         currentPersonalizedBlockedIngredients = [];
         syncRestrictionsFromProfile();
         saveSessionList(sessionKeys.special, []);
         saveSessionList(sessionKeys.blocked, []);
-        specialTags.replaceChildren();
+        if (specialTags) specialTags.replaceChildren();
         renderState();
       }
 
       function showWarning(mode, message) {
         const target = mode === "chef" ? chefWarning : customWarning;
+        if (!target) return;
         target.textContent = message;
       }
 
       function clearWarnings() {
-        customWarning.textContent = "";
-        chefWarning.textContent = "";
+        if (customWarning) customWarning.textContent = "";
+        if (chefWarning) chefWarning.textContent = "";
       }
 
       function setRecipeOptionsOpen(open) {
+        if (!recipeOptionsPanel) return;
         recipeOptionsPanel.classList.toggle("is-open", open);
       }
 
       function setForbiddenFoodsOpen(open) {
+        if (!forbiddenFoodsCard || !toggleForbiddenFoods) return;
         forbiddenFoodsCard.hidden = !open;
         toggleForbiddenFoods.setAttribute("aria-expanded", String(open));
       }
@@ -945,29 +916,17 @@
         photo.dataset.imageRequestId = requestId;
         photo.hidden = true;
         photo.removeAttribute("src");
-        if (!imageEndpoint) {
-          showImageError("A imagem do prato não está disponível neste modo de visualização.");
-          return;
-        }
         try {
-          const response = await fetch(imageEndpoint, {
-            method: "POST",
-            headers: await window.BistroPetSupabase.authHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({
-              generationType: generationTypeForMode(recipe.mode),
-              recipe: {
-                id: recipe.mode,
-                requestId,
-                recipeName: recipe.title,
-                ingredients: recipe.ingredients
-              }
-            })
+          const image = await window.BistroPetImageService.generateRecipeImage({
+            generationType: generationTypeForMode(recipe.mode),
+            recipe: {
+              id: recipe.mode,
+              requestId,
+              recipeName: recipe.title,
+              ingredients: recipe.ingredients
+            }
           });
-          const data = await response.json();
-          const image = data.images && data.images[0];
           if (photo.dataset.imageRequestId !== requestId) return;
-          if (!response.ok) throw new Error(data.message || "Não foi possível gerar a imagem do prato agora.");
-          if (!image || !image.imageUrl) throw new Error("A imagem do prato não foi retornada corretamente.");
           recipe.image = image.imageUrl;
           photo.src = image.imageUrl;
           photo.hidden = false;
@@ -1022,7 +981,7 @@
 
       function setMode(mode) {
         activeRecipeMode = mode;
-        specialInput.value = "";
+        if (specialInput) specialInput.value = "";
         if (mode === "personalizada") {
           syncPersonalizedProfileBlockedItems();
         } else {
@@ -1036,9 +995,11 @@
         document.querySelectorAll(".mode-panel").forEach(panel => {
           panel.classList.toggle("active", panel.dataset.panel === mode);
         });
-        document.getElementById("modePanelTitle").textContent = modeCopy[mode].title;
-        document.getElementById("modePanelCopy").textContent = modeCopy[mode].help;
-        document.getElementById("createRecipe").textContent = "Criar receita";
+        const modePanelTitle = document.getElementById("modePanelTitle");
+        const modePanelCopy = document.getElementById("modePanelCopy");
+        if (modePanelTitle) modePanelTitle.textContent = modeCopy[mode].title;
+        if (modePanelCopy) modePanelCopy.textContent = modeCopy[mode].help;
+        document.getElementById("createRecipe").textContent = "Receita do Dia";
         clearWarnings();
         resetRecipeCard();
       }
@@ -1100,21 +1061,27 @@
         const name = getPetName();
         document.querySelector(".chef-pet-card strong").textContent = name;
         document.querySelector(".bistro-menu h1").textContent = `Hoje vamos criar algo especial para ${name}.`;
-        specialInput.placeholder = `Digite ingredientes importantes para ${name}`;
+        if (specialInput) specialInput.placeholder = `Digite ingredientes importantes para ${name}`;
       }
 
-      document.getElementById("addSpecialIngredient").addEventListener("click", () => {
-        addItems({ input: specialInput, listName: "special", warningMode: "personalizada" });
-      });
-      document.getElementById("addBlockedIngredient").addEventListener("click", () => {
-        addBlockedItems().catch(error => alert(error.message || "Não foi possível salvar o alimento proibido."));
-      });
-      [specialInput, restrictedInput].forEach(input => {
+      const addSpecialIngredientButton = document.getElementById("addSpecialIngredient");
+      if (addSpecialIngredientButton) {
+        addSpecialIngredientButton.addEventListener("click", () => {
+          addItems({ input: specialInput, listName: "special", warningMode: "personalizada" });
+        });
+      }
+      const addBlockedIngredientButton = document.getElementById("addBlockedIngredient");
+      if (addBlockedIngredientButton) {
+        addBlockedIngredientButton.addEventListener("click", () => {
+          addBlockedItems().catch(error => alert(error.message || "Não foi possível salvar o alimento proibido."));
+        });
+      }
+      [specialInput, restrictedInput].filter(Boolean).forEach(input => {
         input.addEventListener("keydown", event => {
           if (event.key === "Enter") {
             event.preventDefault();
-            if (input === specialInput) document.getElementById("addSpecialIngredient").click();
-            if (input === restrictedInput) document.getElementById("addBlockedIngredient").click();
+            if (input === specialInput && addSpecialIngredientButton) addSpecialIngredientButton.click();
+            if (input === restrictedInput && addBlockedIngredientButton) addBlockedIngredientButton.click();
           }
         });
       });
@@ -1132,9 +1099,11 @@
           setForbiddenFoodsOpen(false);
         });
       });
-      toggleForbiddenFoods.addEventListener("click", () => {
-        setForbiddenFoodsOpen(forbiddenFoodsCard.hidden);
-      });
+      if (toggleForbiddenFoods) {
+        toggleForbiddenFoods.addEventListener("click", () => {
+          setForbiddenFoodsOpen(forbiddenFoodsCard.hidden);
+        });
+      }
       document.getElementById("createRecipe").addEventListener("click", () => {
         generateRecipe().catch(error => alert(error.message || "Não foi possível criar a receita."));
       });

@@ -9,6 +9,10 @@ export function imageCacheKey(combination) {
   return crypto.createHash("sha256").update(payload).digest("hex");
 }
 
+export function weeklyPlanImageCacheKey(combination) {
+  return imageCacheKey(["weeklyPlan:v2", ...(combination || [])]);
+}
+
 export async function getCachedImage(cacheKey) {
   if (process.env.IMAGE_STORAGE_MODE === "memory") return memoryImages.get(cacheKey) || null;
   try {

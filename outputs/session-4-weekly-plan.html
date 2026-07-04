@@ -34,8 +34,7 @@
       .weekly-heading .kitchen-switch { display: block; flex: 1 1 0; min-width: 0; padding: 9px 8px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 253, 248, 0.76); color: var(--muted); text-align: center; box-shadow: 0 10px 28px rgba(57, 67, 51, 0.07); font-size: 11px; line-height: 1.15; white-space: normal; }
       .weekly-heading .kitchen-switch span { color: inherit; font-size: inherit; font-weight: 400; letter-spacing: 0; }
       .weekly-heading .kitchen-switch i { display: none; }
-      #weeklyAuto:checked ~ .kitchen-switches label[for="weeklyAuto"],
-      #weeklyCustom:checked ~ .kitchen-switches label[for="weeklyCustom"] { border-color: rgba(85, 106, 84, 0.28); background: var(--sage-dark); color: var(--paper); }
+      #weeklyAuto:checked ~ .kitchen-switches label[for="weeklyAuto"] { border-color: rgba(85, 106, 84, 0.28); background: var(--sage-dark); color: var(--paper); }
       #weeklyPlanner .weekly-controls { padding-bottom: 6px; border-bottom-color: rgba(46, 51, 43, 0.035); }
       #weeklyPlanner.is-custom-mode .weekly-controls { background: rgba(255, 253, 248, 0.78); border-color: rgba(46, 51, 43, 0.035); }
 	      #weeklyPlanner .weekly-audio-actions { margin-top: 10px; }
@@ -81,15 +80,10 @@
         <p class="meal-eyebrow">Menu Bistro</p>
         <h1>O chef vai organizar a semana da Luna.</h1>
         <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyAuto" checked />
-        <input class="weekly-mode-input" type="radio" name="weekly-mode" id="weeklyCustom" />
 
         <div class="kitchen-switches" aria-label="Modos do plano semanal">
           <label class="kitchen-switch" for="weeklyAuto">
             <span>Sugestão do Chefe</span>
-            <i aria-hidden="true"></i>
-          </label>
-          <label class="kitchen-switch" for="weeklyCustom">
-            <span>Personalizado</span>
             <i aria-hidden="true"></i>
           </label>
         </div>
@@ -139,6 +133,7 @@
 	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.3/dist/umd/supabase.min.js"></script>
 	    <script src="./bistropet-supabase.js"></script>
 	    <script src="./bistropet-storage.js?v=supabase-weekly-plan"></script>
+	    <script src="./bistropet-image-service.js"></script>
 	    <script src="./bistropet-accessibility.js?v=tts-weekly-selected-day"></script>
     <script>
       (async function () {
@@ -159,8 +154,6 @@
       let weeklyImageLoadingIndex = null;
       const weeklyVisibleImageIndexes = new Set();
       const imagePreparingSrc = "./recipe-weekly-neutral-photo.png";
-      const imageEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-recipe-image";
-
       function profilePortionSize() {
         const profile = window.BistroPetStorage ? window.BistroPetStorage.getPetProfile() : {};
         const weightText = String(profile.weight || "").replace(",", ".");
@@ -625,15 +618,7 @@
 
       function uniqueWeeklyIngredients({ pool, activeRestrictions, dayIndex, usedCombinations, previousIngredients }) {
         const preferred = uniqueIngredients(pool).filter(item => !isRestricted(item, activeRestrictions));
-        const customMode = document.getElementById("weeklyCustom").checked;
-        if (customMode) {
-          return customWeeklyIngredients({
-            pool: preferred,
-            activeRestrictions,
-            dayIndex,
-            usedCombinations
-          });
-        }
+        const customMode = false;
         for (let attempt = 0; attempt < 21; attempt += 1) {
           const dayPreferred = preferredIngredientsForDay(preferred, customMode, dayIndex, attempt);
           const avoidPreferred = customMode
@@ -663,7 +648,7 @@
       }
 
       function weeklyModeValue() {
-        return document.getElementById("weeklyCustom").checked ? "custom" : "auto";
+        return "auto";
       }
 
       function weeklyModeLabel(mode) {
@@ -677,7 +662,7 @@
       }
 
       function buildWeeklyPlan(profile) {
-        const customMode = document.getElementById("weeklyCustom").checked;
+        const customMode = false;
         const source = weeklySourceIngredients(profile, customMode);
         const activeRestrictions = activeWeeklyRestrictions(profile);
         const safePreferred = source.filter(item => !isRestricted(item, activeRestrictions));
@@ -727,10 +712,6 @@
       }
 
       async function generateWeeklyDayImage(dayIndex) {
-        if (!imageEndpoint) {
-          alert("A imagem do prato não está disponível neste modo de visualização.");
-          return;
-        }
         if (weeklyImageLoadingIndex !== null) return;
         const recipe = currentPlan[dayIndex];
         if (!recipe) return;
@@ -746,23 +727,7 @@
         weeklyImageLoadingIndex = dayIndex;
         renderProfileWeeklyPlan(currentPlan);
         try {
-          const response = await fetch(imageEndpoint, {
-            method: "POST",
-            headers: await window.BistroPetSupabase.authHeaders({ "Content-Type": "application/json" }),
-            body: JSON.stringify({
-              generationType: "weeklyPlan",
-              recipes: [{
-                id: String(dayIndex),
-                recipeName: recipe.title,
-                ingredients: recipe.ingredients
-              }]
-            })
-          });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.message || "Não foi possível gerar a imagem do prato.");
-          if (!Array.isArray(data.images)) throw new Error("A resposta da imagem veio incompleta.");
-          const image = data.images.find(item => String(item.id) === String(dayIndex));
-          if (!image || !image.imageUrl) throw new Error("A imagem do prato não foi retornada corretamente.");
+          const image = await window.BistroPetImageService.generateWeeklyPlanImage({ dayIndex, recipe });
           if (image && image.imageUrl && currentPlan[dayIndex]) {
             currentPlan[dayIndex].image = image.imageUrl;
             weeklyVisibleImageIndexes.add(dayIndex);
@@ -850,7 +815,7 @@
       }
 
       async function updateModeState() {
-        const customMode = document.getElementById("weeklyCustom").checked;
+        const customMode = false;
         const nextMode = customMode ? "custom" : "auto";
         if (activeWeeklyMode !== nextMode) {
           await clearWeeklyPlanState();
@@ -885,18 +850,15 @@
       refreshProfileCopy(savedProfile);
       const savedPlan = window.BistroPetStorage.getWeeklyPlan();
       if (isSavedPlanValid(savedPlan, savedProfile)) {
-        const customSavedPlan = savedPlan[0]?.planMode === "custom";
-        document.getElementById("weeklyCustom").checked = customSavedPlan;
-        document.getElementById("weeklyAuto").checked = !customSavedPlan;
-        activeWeeklyMode = customSavedPlan ? "custom" : "auto";
-        weeklyPlanner.classList.toggle("is-custom-mode", customSavedPlan);
+        document.getElementById("weeklyAuto").checked = true;
+        activeWeeklyMode = "auto";
+        weeklyPlanner.classList.remove("is-custom-mode");
         renderProfileWeeklyPlan(savedPlan);
       } else {
         await clearWeeklyPlanState(Boolean(savedPlan));
         await updateModeState();
       }
       document.getElementById("weeklyAuto").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
-      document.getElementById("weeklyCustom").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
 	      createWeekPlanButton.addEventListener("click", () => {
 	        const planIsOpen = weeklyPlanner.classList.contains("is-generated");
 	        const action = planIsOpen ? clearWeeklyPlanState(false) : generateProfileWeeklyPlan();

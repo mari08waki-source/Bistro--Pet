@@ -1,9 +1,6 @@
-import { imageCacheKey, getCachedImage, saveCachedImage } from "./_image-cache.js";
-import { checkImageLimit, refundImageLimit } from "./_image-limits.js";
-import { buildExactRecipeImagePrompt, buildRecipeImagePrompt, generateOpenAIRecipeImage } from "./_openai-image.js";
-import { simpleIngredientCombination } from "./_ingredient-combination.js";
 import { identifyImageClient } from "./_image-client.js";
 import { withImageRequestLock } from "./_image-request-lock.js";
+import { generateIndividualRecipeImage, generateWeeklyPlanDayImage } from "./_image-generation-service.js";
 
 const validGenerationTypes = new Set(["customRecipe", "chefSuggestion", "weeklyPlan"]);
 
@@ -79,17 +76,12 @@ export default async function handler(request, response) {
 
     return await withImageRequestLock(requestLockKey, async () => {
       if (generationType !== "weeklyPlan") {
-        const limit = await checkImageLimit({ generationType, clientId });
-        imageLog("generation_start", {
-          mode: process.env.IMAGE_GENERATION_MODE,
-          generationType,
-          user: safeClientId(clientId),
-          allowed: limit.allowed,
-          limit: limit.limit,
-          period: limit.period,
-          remaining: limit.remaining
-        });
-        if (!limit.allowed) {
+        const results = [];
+        let limit = null;
+        for (const recipe of recipes) {
+          const generated = await generateIndividualRecipeImage({ generationType, recipe, clientId, imageLog });
+          limit = generated.limit;
+          if (generated.blocked) {
           imageLog("limit_blocked", {
             generationType,
             user: safeClientId(clientId),
@@ -102,57 +94,8 @@ export default async function handler(request, response) {
             limit,
             images: []
           }, 429);
-        }
-
-        const results = [];
-        for (const recipe of recipes) {
-          try {
-            const prompt = buildExactRecipeImagePrompt(recipe);
-            imageLog("gemini_call", {
-              generationType,
-              user: safeClientId(clientId),
-              recipeId: recipe.id,
-              size: "1024x1536"
-            });
-            const imageBuffer = await generateOpenAIRecipeImage({ prompt, size: "1024x1536" });
-            imageLog("gemini_response", {
-              generationType,
-              user: safeClientId(clientId),
-              recipeId: recipe.id,
-              bytes: imageBuffer.length
-            });
-            const uniqueKey = imageCacheKey([
-              generationType,
-              recipe.recipeName,
-              ...recipe.ingredients,
-              recipe.requestId || `${Date.now()}-${Math.random()}`
-            ]);
-            imageLog("storage_upload_start", {
-              generationType,
-              user: safeClientId(clientId),
-              recipeId: recipe.id,
-              cacheKey: uniqueKey
-            });
-            const imageUrl = await saveCachedImage(uniqueKey, imageBuffer);
-            imageLog("storage_upload_done", {
-              generationType,
-              user: safeClientId(clientId),
-              recipeId: recipe.id,
-              hasUrl: Boolean(imageUrl),
-              imageUrl
-            });
-            results.push({ id: recipe.id, imageUrl, status: "ready", cached: false });
-          } catch (error) {
-            const refundedCount = await refundImageLimit({ generationType, clientId });
-            imageLog("generation_failed_refunded", {
-              generationType,
-              user: safeClientId(clientId),
-              recipeId: recipe.id,
-              refundedCount,
-              error: error.message
-            });
-            throw error;
           }
+          results.push(generated.result);
         }
         imageLog("frontend_response", {
           generationType,
@@ -166,32 +109,9 @@ export default async function handler(request, response) {
       const results = [];
       let limit = null;
       for (const recipe of recipes) {
-        const combination = simpleIngredientCombination(recipe.ingredients);
-        const cacheKey = imageCacheKey(combination);
-        const cachedUrl = await getCachedImage(cacheKey);
-        if (cachedUrl) {
-          imageLog("cache_hit", {
-            generationType,
-            user: safeClientId(clientId),
-            recipeId: recipe.id,
-            cacheKey
-          });
-          results.push({ id: recipe.id, cacheKey, combination, imageUrl: cachedUrl, status: "ready", cached: true });
-          continue;
-        }
-
-        limit = await checkImageLimit({ generationType, clientId });
-        imageLog("generation_start", {
-          mode: process.env.IMAGE_GENERATION_MODE,
-          generationType,
-          user: safeClientId(clientId),
-          allowed: limit.allowed,
-          limit: limit.limit,
-          period: limit.period,
-          remaining: limit.remaining,
-          recipeId: recipe.id
-        });
-        if (!limit.allowed) {
+        const generated = await generateWeeklyPlanDayImage({ generationType, recipe, clientId, imageLog });
+        limit = generated.limit || limit;
+        if (generated.blocked) {
           imageLog("limit_blocked", {
             generationType,
             user: safeClientId(clientId),
@@ -206,47 +126,7 @@ export default async function handler(request, response) {
             images: []
           }, 429);
         }
-        try {
-          const prompt = buildRecipeImagePrompt(combination);
-          imageLog("gemini_call", {
-            generationType,
-            user: safeClientId(clientId),
-            recipeId: recipe.id,
-            size: "1024x1024"
-          });
-          const imageBuffer = await generateOpenAIRecipeImage({ prompt });
-          imageLog("gemini_response", {
-            generationType,
-            user: safeClientId(clientId),
-            recipeId: recipe.id,
-            bytes: imageBuffer.length
-          });
-          imageLog("storage_upload_start", {
-            generationType,
-            user: safeClientId(clientId),
-            recipeId: recipe.id,
-            cacheKey
-          });
-          const imageUrl = await saveCachedImage(cacheKey, imageBuffer);
-          imageLog("storage_upload_done", {
-            generationType,
-            user: safeClientId(clientId),
-            recipeId: recipe.id,
-            hasUrl: Boolean(imageUrl),
-            imageUrl
-          });
-          results.push({ id: recipe.id, cacheKey, combination, imageUrl, status: "ready", cached: false });
-        } catch (error) {
-          const refundedCount = await refundImageLimit({ generationType, clientId });
-          imageLog("generation_failed_refunded", {
-            generationType,
-            user: safeClientId(clientId),
-            recipeId: recipe.id,
-            refundedCount,
-            error: error.message
-          });
-          throw error;
-        }
+        results.push(generated.result);
       }
 
       imageLog("frontend_response", {
