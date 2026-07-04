@@ -73,7 +73,11 @@ export default async function handler(request, response) {
       return sendJson(response, { error: "Weekly image requests must contain exactly one day recipe." }, 400);
     }
 
-    return await withImageRequestLock(`${clientId}:${generationType}`, async () => {
+    const requestLockKey = generationType === "weeklyPlan"
+      ? `${clientId}:${generationType}:${recipes[0].id || "day"}`
+      : `${clientId}:${generationType}`;
+
+    return await withImageRequestLock(requestLockKey, async () => {
       if (generationType !== "weeklyPlan") {
         const limit = await checkImageLimit({ generationType, clientId });
         imageLog("generation_start", {
