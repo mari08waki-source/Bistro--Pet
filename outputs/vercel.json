@@ -4,6 +4,9 @@
     "api/generate-recipe-image.js": {
       "maxDuration": 60
     },
+    "api/generate-weekly-plan.js": {
+      "maxDuration": 60
+    },
     "api/admin-access.js": {
       "maxDuration": 10
     },

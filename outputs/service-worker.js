@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "bistropet-pwa";
-const CACHE_NAME = `${CACHE_PREFIX}-v10-20260704`;
+const CACHE_NAME = `${CACHE_PREFIX}-v11-20260704`;
 const APP_SHELL = [
   "/",
   "/index.html",

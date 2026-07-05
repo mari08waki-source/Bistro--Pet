@@ -78,10 +78,10 @@ export async function generateIndividualRecipeImage({ generationType, recipe, cl
   }
 }
 
-export async function generateWeeklyPlanDayImage({ generationType, recipe, clientId, imageLog, forceRefresh = false }) {
+export async function generateWeeklyPlanDayImage({ generationType, recipe, clientId, imageLog }) {
   const combination = simpleIngredientCombination(recipe.ingredients);
   const cacheKey = weeklyPlanImageCacheKey(combination);
-  const cachedUrl = forceRefresh ? null : await getCachedImage(cacheKey);
+  const cachedUrl = await getCachedImage(cacheKey);
 
   if (cachedUrl) {
     imageLog("cache_hit", {
@@ -97,9 +97,7 @@ export async function generateWeeklyPlanDayImage({ generationType, recipe, clien
     };
   }
 
-  const limit = forceRefresh
-    ? { allowed: true, limit: null, period: "repair", remaining: null }
-    : await checkImageLimit({ generationType, clientId });
+  const limit = await checkImageLimit({ generationType, clientId });
   imageLog("generation_start", {
     mode: process.env.IMAGE_GENERATION_MODE,
     generationType,

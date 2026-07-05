@@ -113,8 +113,7 @@ export default async function handler(request, response) {
           generationType,
           recipe,
           clientId,
-          imageLog,
-          forceRefresh: Boolean(body.forceRefresh)
+          imageLog
         });
         limit = generated.limit || limit;
         if (generated.blocked) {

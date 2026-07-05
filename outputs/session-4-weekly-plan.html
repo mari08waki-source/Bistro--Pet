@@ -152,6 +152,7 @@
       let activeDayIndex = null;
       let activeWeeklyMode = "auto";
       let weeklyImageLoadingIndex = null;
+      const weeklyPlanEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-weekly-plan";
       const weeklyVisibleImageIndexes = new Set();
       const imagePreparingSrc = "./recipe-weekly-neutral-photo.png";
       function profilePortionSize() {
@@ -715,27 +716,6 @@
         if (weeklyImageLoadingIndex !== null) return;
         const recipe = currentPlan[dayIndex];
         if (!recipe) return;
-        let forceRefreshImage = false;
-        if (
-          dayIndex === 0
-          && hasWeeklyDishImage(recipe.image)
-          && window.BistroPetImageService
-          && typeof window.BistroPetImageService.isCurrentWeeklyPlanImage === "function"
-        ) {
-          const isCurrentImage = await window.BistroPetImageService.isCurrentWeeklyPlanImage({
-            imageUrl: recipe.image,
-            ingredients: recipe.ingredients,
-            dayIndex
-          });
-          const wasRefreshed = typeof window.BistroPetImageService.isWeeklyPlanImageUrlRefreshed === "function"
-            ? window.BistroPetImageService.isWeeklyPlanImageUrlRefreshed(recipe.image)
-            : false;
-          if (!isCurrentImage || !wasRefreshed) {
-            forceRefreshImage = true;
-            recipe.image = "";
-            weeklyVisibleImageIndexes.delete(dayIndex);
-          }
-        }
         if (hasWeeklyDishImage(recipe.image)) {
           if (weeklyVisibleImageIndexes.has(dayIndex)) {
             weeklyVisibleImageIndexes.delete(dayIndex);
@@ -748,13 +728,9 @@
         weeklyImageLoadingIndex = dayIndex;
         renderProfileWeeklyPlan(currentPlan);
         try {
-          const image = await window.BistroPetImageService.generateWeeklyPlanImage({ dayIndex, recipe, forceRefresh: forceRefreshImage });
+          const image = await window.BistroPetImageService.generateWeeklyPlanImage({ dayIndex, recipe });
           if (image && image.imageUrl && currentPlan[dayIndex]) {
-            currentPlan[dayIndex].image = forceRefreshImage
-              && window.BistroPetImageService
-              && typeof window.BistroPetImageService.markWeeklyPlanImageUrlRefreshed === "function"
-                ? window.BistroPetImageService.markWeeklyPlanImageUrlRefreshed(image.imageUrl)
-                : image.imageUrl;
+            currentPlan[dayIndex].image = image.imageUrl;
             weeklyVisibleImageIndexes.add(dayIndex);
             if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
           }
@@ -853,6 +829,7 @@
       function isSavedPlanValid(plan, profile) {
         const restrictions = activeWeeklyRestrictions(profile);
         return Array.isArray(plan) && plan.length === 7 && !plan.some(item => {
+          if (item.profile?.source !== "api") return true;
           const ingredients = Array.isArray(item.ingredients) ? item.ingredients : [];
           const recipeItems = uniqueIngredients([
             ...ingredients,
@@ -862,10 +839,27 @@
         });
       }
 
+      async function requestWeeklyPlan(profile) {
+        if (!weeklyPlanEndpoint) throw new Error("O plano semanal dinâmico não está disponível neste modo de visualização.");
+        const response = await fetch(weeklyPlanEndpoint, {
+          method: "POST",
+          headers: await window.BistroPetSupabase.authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            profile,
+            restrictions: activeWeeklyRestrictions(profile)
+          })
+        });
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.plan)) {
+          throw new Error(data.message || "Não foi possível gerar o plano semanal agora.");
+        }
+        return data.plan.map(item => Object.assign({}, item, { image: null }));
+      }
+
       async function generateProfileWeeklyPlan() {
         const profile = window.BistroPetStorage.getPetProfile();
         await clearWeeklyPlanState(false);
-        const plan = buildWeeklyPlan(profile);
+        const plan = await requestWeeklyPlan(profile);
         activeDayIndex = null;
         renderProfileWeeklyPlan(plan);
         await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
