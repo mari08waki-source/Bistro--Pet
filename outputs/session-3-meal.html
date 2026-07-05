@@ -974,6 +974,10 @@
         description.hidden = false;
         document.getElementById("resultIngredients").innerHTML = "";
         document.getElementById("prepSteps").innerHTML = "";
+        const photo = document.getElementById("mealPhoto");
+        photo.dataset.imageRequestId = "";
+        photo.hidden = true;
+        photo.removeAttribute("src");
         const saveButton = document.getElementById("saveRecipeToHistory");
         saveButton.textContent = "Salvar";
         saveButton.disabled = false;
@@ -1105,6 +1109,10 @@
         });
       }
       document.getElementById("createRecipe").addEventListener("click", () => {
+        if (kitchen.classList.contains("is-generated")) {
+          resetRecipeCard();
+          return;
+        }
         generateRecipe().catch(error => alert(error.message || "Não foi possível criar a receita."));
       });
 	      document.getElementById("saveRecipeToHistory").addEventListener("click", async event => {
