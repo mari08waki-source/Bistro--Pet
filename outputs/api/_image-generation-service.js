@@ -97,7 +97,9 @@ export async function generateWeeklyPlanDayImage({ generationType, recipe, clien
     };
   }
 
-  const limit = await checkImageLimit({ generationType, clientId });
+  const limit = forceRefresh
+    ? { allowed: true, limit: null, period: "repair", remaining: null }
+    : await checkImageLimit({ generationType, clientId });
   imageLog("generation_start", {
     mode: process.env.IMAGE_GENERATION_MODE,
     generationType,

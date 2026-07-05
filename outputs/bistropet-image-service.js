@@ -2,7 +2,6 @@
   "use strict";
 
   const imageEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-recipe-image";
-  const weeklyPlanImageRefreshMarks = new Set();
 
   function imageError(message) {
     return new Error(message || "Não foi possível gerar a imagem do prato agora.");
@@ -86,19 +85,15 @@
     return String(imageUrl).includes(cacheKey);
   }
 
-  async function weeklyPlanRefreshKey({ ingredients, dayIndex }) {
-    const cacheKey = await weeklyPlanImageCacheKey(ingredients);
-    return cacheKey ? `bistropet:weekly-image-refreshed:${dayIndex}:${cacheKey}` : "";
+  function isWeeklyPlanImageUrlRefreshed(imageUrl) {
+    return String(imageUrl || "").includes("bistropet_refresh=1");
   }
 
-  async function wasWeeklyPlanImageRefreshed({ ingredients, dayIndex }) {
-    const refreshKey = await weeklyPlanRefreshKey({ ingredients, dayIndex });
-    return Boolean(refreshKey && weeklyPlanImageRefreshMarks.has(refreshKey));
-  }
-
-  async function markWeeklyPlanImageRefreshed({ ingredients, dayIndex }) {
-    const refreshKey = await weeklyPlanRefreshKey({ ingredients, dayIndex });
-    if (refreshKey) weeklyPlanImageRefreshMarks.add(refreshKey);
+  function markWeeklyPlanImageUrlRefreshed(imageUrl) {
+    const value = String(imageUrl || "");
+    if (!value || isWeeklyPlanImageUrlRefreshed(value)) return value;
+    const separator = value.includes("?") ? "&" : "?";
+    return `${value}${separator}bistropet_refresh=1`;
   }
 
   async function requestImage(payload) {
@@ -150,7 +145,7 @@
     generateRecipeImage,
     generateWeeklyPlanImage,
     isCurrentWeeklyPlanImage,
-    wasWeeklyPlanImageRefreshed,
-    markWeeklyPlanImageRefreshed
+    isWeeklyPlanImageUrlRefreshed,
+    markWeeklyPlanImageUrlRefreshed
   };
 })();

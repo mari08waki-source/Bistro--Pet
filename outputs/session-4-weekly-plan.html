@@ -727,8 +727,8 @@
             ingredients: recipe.ingredients,
             dayIndex
           });
-          const wasRefreshed = typeof window.BistroPetImageService.wasWeeklyPlanImageRefreshed === "function"
-            ? await window.BistroPetImageService.wasWeeklyPlanImageRefreshed({ ingredients: recipe.ingredients, dayIndex })
+          const wasRefreshed = typeof window.BistroPetImageService.isWeeklyPlanImageUrlRefreshed === "function"
+            ? window.BistroPetImageService.isWeeklyPlanImageUrlRefreshed(recipe.image)
             : false;
           if (!isCurrentImage || !wasRefreshed) {
             forceRefreshImage = true;
@@ -750,15 +750,12 @@
         try {
           const image = await window.BistroPetImageService.generateWeeklyPlanImage({ dayIndex, recipe, forceRefresh: forceRefreshImage });
           if (image && image.imageUrl && currentPlan[dayIndex]) {
-            currentPlan[dayIndex].image = image.imageUrl;
-            weeklyVisibleImageIndexes.add(dayIndex);
-            if (
-              forceRefreshImage
+            currentPlan[dayIndex].image = forceRefreshImage
               && window.BistroPetImageService
-              && typeof window.BistroPetImageService.markWeeklyPlanImageRefreshed === "function"
-            ) {
-              await window.BistroPetImageService.markWeeklyPlanImageRefreshed({ ingredients: currentPlan[dayIndex].ingredients, dayIndex });
-            }
+              && typeof window.BistroPetImageService.markWeeklyPlanImageUrlRefreshed === "function"
+                ? window.BistroPetImageService.markWeeklyPlanImageUrlRefreshed(image.imageUrl)
+                : image.imageUrl;
+            weeklyVisibleImageIndexes.add(dayIndex);
             if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
           }
         } catch (error) {
