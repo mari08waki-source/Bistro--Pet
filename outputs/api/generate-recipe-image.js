@@ -109,7 +109,13 @@ export default async function handler(request, response) {
       const results = [];
       let limit = null;
       for (const recipe of recipes) {
-        const generated = await generateWeeklyPlanDayImage({ generationType, recipe, clientId, imageLog });
+        const generated = await generateWeeklyPlanDayImage({
+          generationType,
+          recipe,
+          clientId,
+          imageLog,
+          forceRefresh: Boolean(body.forceRefresh)
+        });
         limit = generated.limit || limit;
         if (generated.blocked) {
           imageLog("limit_blocked", {

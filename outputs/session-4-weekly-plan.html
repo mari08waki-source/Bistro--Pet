@@ -715,6 +715,7 @@
         if (weeklyImageLoadingIndex !== null) return;
         const recipe = currentPlan[dayIndex];
         if (!recipe) return;
+        let forceRefreshImage = false;
         if (
           dayIndex === 0
           && hasWeeklyDishImage(recipe.image)
@@ -723,9 +724,14 @@
         ) {
           const isCurrentImage = await window.BistroPetImageService.isCurrentWeeklyPlanImage({
             imageUrl: recipe.image,
-            ingredients: recipe.ingredients
+            ingredients: recipe.ingredients,
+            dayIndex
           });
-          if (!isCurrentImage) {
+          const wasRefreshed = typeof window.BistroPetImageService.wasWeeklyPlanImageRefreshed === "function"
+            ? await window.BistroPetImageService.wasWeeklyPlanImageRefreshed({ ingredients: recipe.ingredients, dayIndex })
+            : false;
+          if (!isCurrentImage || !wasRefreshed) {
+            forceRefreshImage = true;
             recipe.image = "";
             weeklyVisibleImageIndexes.delete(dayIndex);
           }
@@ -742,10 +748,17 @@
         weeklyImageLoadingIndex = dayIndex;
         renderProfileWeeklyPlan(currentPlan);
         try {
-          const image = await window.BistroPetImageService.generateWeeklyPlanImage({ dayIndex, recipe });
+          const image = await window.BistroPetImageService.generateWeeklyPlanImage({ dayIndex, recipe, forceRefresh: forceRefreshImage });
           if (image && image.imageUrl && currentPlan[dayIndex]) {
             currentPlan[dayIndex].image = image.imageUrl;
             weeklyVisibleImageIndexes.add(dayIndex);
+            if (
+              forceRefreshImage
+              && window.BistroPetImageService
+              && typeof window.BistroPetImageService.markWeeklyPlanImageRefreshed === "function"
+            ) {
+              await window.BistroPetImageService.markWeeklyPlanImageRefreshed({ ingredients: currentPlan[dayIndex].ingredients, dayIndex });
+            }
             if (window.BistroPetStorage) await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
           }
         } catch (error) {

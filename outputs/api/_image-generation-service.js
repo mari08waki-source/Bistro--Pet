@@ -78,10 +78,10 @@ export async function generateIndividualRecipeImage({ generationType, recipe, cl
   }
 }
 
-export async function generateWeeklyPlanDayImage({ generationType, recipe, clientId, imageLog }) {
+export async function generateWeeklyPlanDayImage({ generationType, recipe, clientId, imageLog, forceRefresh = false }) {
   const combination = simpleIngredientCombination(recipe.ingredients);
   const cacheKey = weeklyPlanImageCacheKey(combination);
-  const cachedUrl = await getCachedImage(cacheKey);
+  const cachedUrl = forceRefresh ? null : await getCachedImage(cacheKey);
 
   if (cachedUrl) {
     imageLog("cache_hit", {
