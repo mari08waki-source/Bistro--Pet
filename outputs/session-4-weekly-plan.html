@@ -715,6 +715,21 @@
         if (weeklyImageLoadingIndex !== null) return;
         const recipe = currentPlan[dayIndex];
         if (!recipe) return;
+        if (
+          dayIndex === 0
+          && hasWeeklyDishImage(recipe.image)
+          && window.BistroPetImageService
+          && typeof window.BistroPetImageService.isCurrentWeeklyPlanImage === "function"
+        ) {
+          const isCurrentImage = await window.BistroPetImageService.isCurrentWeeklyPlanImage({
+            imageUrl: recipe.image,
+            ingredients: recipe.ingredients
+          });
+          if (!isCurrentImage) {
+            recipe.image = "";
+            weeklyVisibleImageIndexes.delete(dayIndex);
+          }
+        }
         if (hasWeeklyDishImage(recipe.image)) {
           if (weeklyVisibleImageIndexes.has(dayIndex)) {
             weeklyVisibleImageIndexes.delete(dayIndex);
