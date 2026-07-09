@@ -149,6 +149,7 @@
       const customIngredients = [];
       const customBlockedIngredients = [];
       let currentPlan = [];
+      let closedWeeklyPlan = null;
       let activeDayIndex = null;
       let activeWeeklyMode = "auto";
       let weeklyImageLoadingIndex = null;
@@ -745,6 +746,7 @@
 	      async function clearWeeklyPlanState(persist = true) {
 	        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
         currentPlan = [];
+        closedWeeklyPlan = null;
         activeDayIndex = null;
         weeklyVisibleImageIndexes.clear();
         weeklyDays.innerHTML = "";
@@ -754,12 +756,25 @@
         }
       }
 
+      function snapshotWeeklyPlan(plan) {
+        return plan.map(item => Object.assign({}, item, {
+          ingredients: Array.isArray(item.ingredients) ? [...item.ingredients] : []
+        }));
+      }
+
+      function canRestoreWeeklyPlan(plan) {
+        return Array.isArray(plan) && plan.length === 7 && plan.every(item => (
+          item && item.day && item.title && Array.isArray(item.ingredients) && item.ingredients.length && item.prep
+        ));
+      }
+
       function renderProfileWeeklyPlan(plan) {
         const planMode = weeklyModeValue();
         currentPlan = plan.map(item => Object.assign({
           planMode,
           planModeLabel: weeklyModeLabel(planMode)
         }, item));
+        if (canRestoreWeeklyPlan(currentPlan)) closedWeeklyPlan = snapshotWeeklyPlan(currentPlan);
         weeklyDays.innerHTML = `
           <div class="day-tabs" aria-label="Dias da semana">
             ${currentPlan.map((item, index) => `
@@ -856,6 +871,35 @@
         return data.plan.map(item => Object.assign({}, item, { image: null }));
       }
 
+      function closeWeeklyPlanView() {
+        if (window.BistroPetAccessibility) window.BistroPetAccessibility.stop();
+        if (canRestoreWeeklyPlan(currentPlan)) closedWeeklyPlan = snapshotWeeklyPlan(currentPlan);
+        activeDayIndex = null;
+        weeklyImageLoadingIndex = null;
+        weeklyVisibleImageIndexes.clear();
+        weeklyDays.innerHTML = "";
+        weeklyPlanner.classList.remove("is-generated");
+      }
+
+      async function openWeeklyPlanView() {
+        const profile = window.BistroPetStorage.getPetProfile();
+        const savedPlan = window.BistroPetStorage.getWeeklyPlan();
+        const planToReopen = canRestoreWeeklyPlan(currentPlan)
+          ? currentPlan
+          : canRestoreWeeklyPlan(closedWeeklyPlan)
+            ? closedWeeklyPlan
+            : isSavedPlanValid(savedPlan, profile)
+              ? savedPlan
+              : null;
+        if (planToReopen) {
+          activeDayIndex = null;
+          weeklyImageLoadingIndex = null;
+          renderProfileWeeklyPlan(planToReopen);
+          return;
+        }
+        await generateProfileWeeklyPlan();
+      }
+
       async function generateProfileWeeklyPlan() {
         const profile = window.BistroPetStorage.getPetProfile();
         await clearWeeklyPlanState(false);
@@ -880,7 +924,7 @@
       document.getElementById("weeklyAuto").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
 	      createWeekPlanButton.addEventListener("click", () => {
 	        const planIsOpen = weeklyPlanner.classList.contains("is-generated");
-	        const action = planIsOpen ? clearWeeklyPlanState(false) : generateProfileWeeklyPlan();
+	        const action = planIsOpen ? Promise.resolve(closeWeeklyPlanView()) : openWeeklyPlanView();
 	        action.catch(error => alert(error.message || "Não foi possível salvar o plano."));
 	      });
 	      document.getElementById("listenWeeklyPlan").addEventListener("click", () => {

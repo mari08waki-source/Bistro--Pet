@@ -304,6 +304,7 @@
       let activeRecipeMode = "chef";
       let recipeIndex = Number(window.sessionStorage.getItem("bistropet:session3:index") || 0);
       let currentGeneratedRecipe = null;
+      let recipeImageLoading = false;
       let specialIngredients = [];
       let profilePersonalizedBlockedIngredients = personalizedProfileBlockedItems();
       let personalizedBlockedIngredients = uniqueItems([
@@ -911,7 +912,10 @@
 
       async function generateRecipeImage(recipe) {
         const photo = document.getElementById("mealPhoto");
+        const createButton = document.getElementById("createRecipe");
         const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        recipeImageLoading = true;
+        createButton.disabled = true;
         recipe.requestId = requestId;
         photo.dataset.imageRequestId = requestId;
         photo.hidden = true;
@@ -937,6 +941,11 @@
             photo.removeAttribute("src");
           }
           showImageError(error.message);
+        } finally {
+          if (photo.dataset.imageRequestId === requestId) {
+            recipeImageLoading = false;
+            createButton.disabled = false;
+          }
         }
       }
 
@@ -1109,6 +1118,7 @@
         });
       }
       document.getElementById("createRecipe").addEventListener("click", () => {
+        if (recipeImageLoading) return;
         if (kitchen.classList.contains("is-generated")) {
           resetRecipeCard();
           return;
