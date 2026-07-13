@@ -209,7 +209,7 @@
           <div class="result-copy">
             <span class="recipe-note">Criado agora pelo Bistro</span>
             <div class="recipe-title-row">
-              <h2 id="recipeName">Delícia suave de frango com abóbora</h2>
+              <h2 id="recipeName">Delícia suave de peito de frango com abóbora</h2>
 	              <div class="recipe-title-actions">
 	                <button class="save-recipe" id="saveRecipeToHistory" type="button">Salvar</button>
 	                <button class="audio-button" id="listenRecipe" type="button" data-audio-listen aria-label="Ouvir receita">🔊 Ouvir</button>
@@ -220,7 +220,7 @@
             <div class="ingredient-list">
               <strong>Ingredientes utilizados</strong>
               <ul id="resultIngredients">
-                <li>Frango</li>
+                <li>Peito de frango</li>
                 <li>Arroz</li>
                 <li>Abóbora</li>
               </ul>
@@ -288,12 +288,13 @@
       };
 
       const chefMenus = [
-        { ingredients: ["Frango", "Abóbora", "Quinoa", "Cenoura"] },
-        { ingredients: ["Peixe", "Batata doce", "Abobrinha", "Arroz"] },
-        { ingredients: ["Carne", "Mandioquinha", "Chuchu", "Cenoura"] },
-        { ingredients: ["Ovos", "Arroz", "Abobrinha", "Abóbora"] },
-        { ingredients: ["Frango", "Mandioquinha", "Batata doce", "Abobrinha"] },
-        { ingredients: ["Peixe", "Quinoa", "Chuchu", "Abóbora"] }
+        { ingredients: ["Peito de frango", "Abóbora", "Quinoa", "Cenoura"] },
+        { ingredients: ["Carne", "Batata doce", "Abobrinha", "Arroz"] },
+        { ingredients: ["Carne moída", "Mandioquinha", "Chuchu", "Cenoura"] },
+        { ingredients: ["Peixe", "Arroz", "Abobrinha", "Abóbora"] },
+        { ingredients: ["Ovo", "Arroz", "Espinafre", "Cenoura"] },
+        { ingredients: ["Fígado de frango", "Mandioquinha", "Batata doce", "Abobrinha"] },
+        { ingredients: ["Fígado bovino", "Quinoa", "Chuchu", "Abóbora"] }
       ];
 
       const sessionKeys = {
@@ -372,10 +373,10 @@
           ["batata doce", "batata-doce"],
           ["couve manteiga", "couve-manteiga"],
           ["couve flor", "couve-flor"],
-          ["fígado de boi", "fígado-de-boi"],
-          ["figado de boi", "figado-de-boi"],
-          ["fígado de galinha", "fígado-de-galinha"],
-          ["figado de galinha", "figado-de-galinha"]
+          ["fígado bovino", "fígado-bovino"],
+          ["figado bovino", "figado-bovino"],
+          ["fígado de frango", "fígado-de-frango"],
+          ["figado de frango", "figado-de-frango"]
         ];
         let text = String(value || "");
         protectedItems.forEach(([item, protectedItem]) => {
@@ -434,6 +435,7 @@
       function proteinFamilyName(value) {
         const name = preparedIngredientName(value);
         if (/\bpeixe\b/.test(name)) return "peixe";
+        if (/\bfigado bovino\b/.test(name)) return "carne";
         if (/\bfrango\b/.test(name)) return "frango";
         if (/\bcarne\b/.test(name)) return "carne";
         return "";
@@ -713,7 +715,7 @@
       }
 
       function isProteinIngredient(item) {
-        return /\b(frango|peixe|carne|peru|ovo|ovos|figado|fígado)\b/.test(normalize(item));
+        return /\b(frango|peixe|carne|ovo|ovos|figado|fígado)\b/.test(normalize(item));
       }
 
       function isFreshIngredient(item) {
@@ -766,7 +768,6 @@
       }
 
       function articleForIngredient(item) {
-        if (/\b(ovos)\b/.test(normalize(item))) return "os";
         return /\b(carne|batata|batata doce|cenoura|mandioca|mandioquinha|abobora|abobrinha|quinoa|aveia|couve|acelga|vagem)\b/.test(normalize(item)) ? "a" : "o";
       }
 
@@ -794,7 +795,7 @@
 
       function cookedMeatEnding(items) {
         if (items.length > 1) return "ficarem bem cozidos";
-        return normalize(items[0]) === "carne" ? "ficar bem cozida" : "ficar bem cozido";
+        return /^carne(?:\s+moida)?$/.test(normalize(items[0])) ? "ficar bem cozida" : "ficar bem cozido";
       }
 
       function cookedIngredientEnding(items) {
@@ -810,8 +811,8 @@
         const eggs = meats.filter(item => /\bovo|ovos\b/.test(normalize(item)));
         const nonEggMeats = meats.filter(item => !eggs.some(egg => sameIngredient(egg, item)));
         const fish = nonEggMeats.filter(item => normalize(item) === "peixe");
-        const chicken = nonEggMeats.filter(item => normalize(item) === "frango");
-        const beef = nonEggMeats.filter(item => normalize(item) === "carne");
+        const chicken = nonEggMeats.filter(item => /\bfrango\b/.test(normalize(item)));
+        const beef = nonEggMeats.filter(item => /^carne(?:\s+moida)?$/.test(normalize(item)));
         const otherMeats = nonEggMeats.filter(item =>
           !fish.some(fishItem => sameIngredient(fishItem, item))
           && !chicken.some(chickenItem => sameIngredient(chickenItem, item))
@@ -871,8 +872,13 @@
           .replace(/\s+(desfiado|desfiada|cozido|cozida|cozidos|cozidas|macio|macia|cremoso|cremosa|delicado|delicada|fresco|fresca|suave)$/i, "")
           .trim();
         const text = normalize(simple);
-        if (/\b(figado de boi|figado bovino)\b/.test(text)) return "Fígado de boi";
-        if (/\b(figado de galinha|figado de frango)\b/.test(text)) return "Fígado de galinha";
+        if (/^ovos?$/.test(text)) return "Ovo";
+        if (text === "frango") return "Peito de frango";
+        if (text === "carne moida") return "Carne moída";
+        if (/\b(patinho|musculo|acem|coxao mole|coxao duro|lagarto|fraldinha|picanha|alcatra)\b/.test(text)) return "Carne";
+        if (/\b(tilapia|merluza|salmao|sardinha|atum|bacalhau)\b/.test(text)) return "Peixe";
+        if (/\b(figado de boi|figado bovino)\b/.test(text)) return "Fígado bovino";
+        if (/\b(figado de galinha|figado de frango)\b/.test(text)) return "Fígado de frango";
         if (text === "couve manteiga") return "Couve manteiga";
         if (text === "couve flor") return "Couve flor";
         return simple;
@@ -894,6 +900,20 @@
           image: "",
           mode
         };
+      }
+
+      function chefIngredientCombination(recipe) {
+        return uniqueItems(recipe?.ingredients || []).map(normalize).sort().join("|");
+      }
+
+      function buildDifferentChefRecipe(previousRecipe) {
+        const previousCombination = chefIngredientCombination(previousRecipe);
+        let recipe = buildRecipe("chef");
+        for (let attempt = 1; previousCombination && chefIngredientCombination(recipe) === previousCombination && attempt < chefMenus.length; attempt += 1) {
+          recipeIndex += 1;
+          recipe = buildRecipe("chef");
+        }
+        return recipe;
       }
 
       function personalizedRecipeHasBlockedContent(recipe) {
@@ -1036,14 +1056,19 @@
             return;
           }
         }
-        if (usage?.existingRecipe) {
-          renderRecipe(usage.existingRecipe);
+        if (usage?.existingRecipe && (activeRecipeMode !== "chef" || usage.completeImageOnly)) {
           if (!usage.existingRecipe.image) {
-            generateRecipeImage(usage.existingRecipe);
+            await generateRecipeImage(usage.existingRecipe);
           }
+          renderRecipe(usage.existingRecipe);
           return;
         }
-        const recipe = buildRecipe(activeRecipeMode);
+        const previousChefRecipe = activeRecipeMode === "chef" && window.BistroPetStorage?.getLastRecipe
+          ? window.BistroPetStorage.getLastRecipe()
+          : null;
+        const recipe = activeRecipeMode === "chef"
+          ? buildDifferentChefRecipe(previousChefRecipe)
+          : buildRecipe(activeRecipeMode);
         if (["chef", "personalizada"].includes(activeRecipeMode) && usage?.existingId) {
           recipe._generationId = usage.existingId;
         }
@@ -1058,11 +1083,11 @@
           return;
         }
 
-        renderRecipe(recipe);
         if (window.BistroPetStorage) {
           await window.BistroPetStorage.saveLastRecipe(recipe);
         }
-        generateRecipeImage(recipe);
+        await generateRecipeImage(recipe);
+        renderRecipe(recipe);
         recipeIndex += 1;
         window.sessionStorage.setItem("bistropet:session3:index", String(recipeIndex));
         if (activeRecipeMode === "personalizada") {
@@ -1164,7 +1189,22 @@
         const recipe = window.BistroPetStorage.getRecipeHistory().find(item => item.historyId === entry.dataset.historyId);
         if (recipe) showHistoryDetail(recipe);
       });
+      const weeklyPlanSnapshotKey = "bistropet:weekly-plan-snapshot";
+      function saveWeeklyPlanSnapshotForNavigation() {
+        const user = window.BistroPetStorage.getCurrentUser();
+        const storedPlan = window.BistroPetStorage.getWeeklyPlan();
+        const plan = window.BistroPetStorage.normalizeWeeklyPlan
+          ? window.BistroPetStorage.normalizeWeeklyPlan(storedPlan)
+          : storedPlan;
+        if (!user?.id || !Array.isArray(plan) || plan.length !== 7) {
+          window.sessionStorage.removeItem(weeklyPlanSnapshotKey);
+          return;
+        }
+        window.sessionStorage.setItem(weeklyPlanSnapshotKey, JSON.stringify({ userId: user.id, plan }));
+      }
+      window.addEventListener("bistropet:session-cleared", () => window.sessionStorage.removeItem(weeklyPlanSnapshotKey));
       document.getElementById("openWeeklyPlan").addEventListener("click", () => {
+        saveWeeklyPlanSnapshotForNavigation();
         window.location.href = "./session-4-weekly-plan.html";
       });
 

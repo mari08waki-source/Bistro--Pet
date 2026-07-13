@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const synthesis = window.speechSynthesis;
@@ -35,7 +35,7 @@
 
   function ingredientCategory(item) {
     const clean = normalize(item);
-    if (/\b(frango|peixe|carne|peru|ovo|ovos|figado)\b/.test(clean)) return "protein";
+    if (/\b(frango|peixe|carne|figado)\b/.test(clean)) return "protein";
     if (/\b(arroz|quinoa|aveia|milho|racao)\b/.test(clean)) return "grain";
     if (/\b(batata|batata doce|mandioca|mandioquinha|inhame|abobora)\b/.test(clean)) return "base";
     return "vegetable";

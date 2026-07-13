@@ -137,10 +137,6 @@
 	    <script src="./bistropet-accessibility.js?v=tts-weekly-selected-day"></script>
     <script>
       (async function () {
-      if (!await window.BistroPetStorage.ready()) {
-        window.location.replace("./index.html");
-        return;
-      }
       const weeklyPlanner = document.getElementById("weeklyPlanner");
       const weeklyDays = document.getElementById("weeklyDays");
       const createWeekPlanButton = document.getElementById("createWeekPlan");
@@ -156,6 +152,7 @@
       const weeklyPlanEndpoint = window.location.protocol === "file:" ? "" : "/api/generate-weekly-plan";
       const weeklyVisibleImageIndexes = new Set();
       const imagePreparingSrc = "./recipe-weekly-neutral-photo.png";
+      const weeklyPlanSnapshotKey = "bistropet:weekly-plan-snapshot";
       function profilePortionSize() {
         const profile = window.BistroPetStorage ? window.BistroPetStorage.getPetProfile() : {};
         const weightText = String(profile.weight || "").replace(",", ".");
@@ -248,9 +245,13 @@
 
       const dayNames = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
       const allowedIngredientTerms = [
-        ["frango", "Frango"],
+        ["peito de frango", "Peito de frango"],
+        ["carne moida", "Carne moída"],
         ["carne", "Carne"],
-        ["peru", "Peru"],
+        ["figado de frango", "Fígado de frango"],
+        ["figado bovino", "Fígado bovino"],
+        ["ovos", "Ovo"],
+        ["ovo", "Ovo"],
         ["mandioca", "Mandioca"],
         ["aipim", "Mandioca"],
         ["macaxeira", "Mandioca"],
@@ -264,8 +265,6 @@
         ["batata doce", "Batata doce"],
         ["batata", "Batata"],
         ["cenoura", "Cenoura"],
-        ["ovos", "Ovos"],
-        ["ovo", "Ovos"],
         ["quinoa", "Quinoa"],
         ["chuchu", "Chuchu"],
         ["abobrinha", "Abobrinha"],
@@ -280,7 +279,7 @@
         ["mandioquinha", "Mandioquinha"]
       ];
       const weeklyCatalog = {
-        protein: ["Carne", "Frango", "Peixe"],
+        protein: ["Peito de frango", "Carne", "Carne moída", "Peixe", "Ovo", "Fígado de frango", "Fígado bovino"],
         base: ["Arroz", "Mandioquinha", "Mandioca", "Batata", "Batata doce", "Quinoa", "Inhame", "Aveia"],
         vegetable: ["Abobrinha", "Chuchu", "Abóbora", "Cenoura", "Pepino", "Vagem", "Couve"]
       };
@@ -316,8 +315,13 @@
       function simpleWeeklyIngredient(value) {
         const item = cleanCustomIngredient(value);
         const clean = normalize(item);
-        if (/\b(figado de boi|figado bovino)\b/.test(clean)) return "Fígado de boi";
-        if (/\b(figado de galinha|figado de frango)\b/.test(clean)) return "Fígado de galinha";
+        if (/^ovos?$/.test(clean)) return "Ovo";
+        if (clean === "frango") return "Peito de frango";
+        if (clean === "carne moida") return "Carne moída";
+        if (/\b(patinho|musculo|acem|coxao mole|coxao duro|lagarto|fraldinha|picanha|alcatra)\b/.test(clean)) return "Carne";
+        if (/\b(tilapia|merluza|salmao|sardinha|atum|bacalhau)\b/.test(clean)) return "Peixe";
+        if (/\b(figado de boi|figado bovino)\b/.test(clean)) return "Fígado bovino";
+        if (/\b(figado de galinha|figado de frango)\b/.test(clean)) return "Fígado de frango";
         if (clean === "couve manteiga") return "Couve manteiga";
         if (clean === "couve flor") return "Couve flor";
         return item;
@@ -325,7 +329,9 @@
 
       function weeklyProteinFamily(value) {
         const clean = normalize(simpleWeeklyIngredient(value));
+        if (/\bovo\b/.test(clean)) return "ovo";
         if (/\bpeixe\b/.test(clean)) return "peixe";
+        if (/\bfigado bovino\b/.test(clean)) return "carne";
         if (/\bfrango\b/.test(clean)) return "frango";
         if (/\bcarne\b/.test(clean)) return "carne";
         return "";
@@ -398,14 +404,14 @@
 
       function ingredientCategory(ingredient) {
         const cleanIngredient = normalize(ingredient);
-        if (weeklyProteinFamily(ingredient) || ["ovos", "ovo", "peru"].some(term => cleanIngredient.includes(term))) return "protein";
+        if (weeklyProteinFamily(ingredient)) return "protein";
         if (["arroz", "racao", "ração", "mandioquinha", "mandioca", "aipim", "macaxeira", "batata doce", "batata", "quinoa", "inhame", "aveia"].some(term => cleanIngredient.includes(term))) return "base";
         if (["abobrinha", "chuchu", "abobora", "cenoura", "pepino", "vagem", "beterraba", "couve", "acelga", "repolho"].some(term => cleanIngredient.includes(term))) return "vegetable";
         return "";
       }
 
       function proteinFamily(ingredient) {
-        return weeklyProteinFamily(ingredient) || normalize(simpleWeeklyIngredient(ingredient));
+        return normalize(simpleWeeklyIngredient(ingredient));
       }
 
       function weeklyNaturalList(items) {
@@ -415,7 +421,6 @@
       }
 
       function weeklyArticleForIngredient(item) {
-        if (/\b(ovos)\b/.test(normalize(item))) return "os";
         return /\b(carne|batata|batata doce|cenoura|mandioca|mandioquinha|abobora|abobrinha|quinoa|aveia|couve|acelga|vagem)\b/.test(normalize(item)) ? "a" : "o";
       }
 
@@ -441,17 +446,9 @@
       }
 
       function generatedWeeklyProteinName(item, offset, restrictions) {
-        const family = weeklyProteinFamily(item);
-        const options = {
-          carne: "Carne",
-          peixe: "Peixe",
-          frango: "Frango"
-        };
-        if (!family || !options[family]) return simpleWeeklyIngredient(item);
-        const label = family === "carne" ? "Carne" : family === "peixe" ? "Peixe" : "Frango";
-        return isRestricted(label, restrictions) || isRestricted(simpleWeeklyIngredient(item), restrictions)
-          ? ""
-          : options[family];
+        const label = simpleWeeklyIngredient(item);
+        if (!weeklyProteinFamily(label)) return label;
+        return isRestricted(label, restrictions) ? "" : label;
       }
 
       function generatedWeeklyIngredients(items, dayIndex, restrictions) {
@@ -468,7 +465,7 @@
 
       function weeklyMeatEnding(items) {
         if (items.length > 1) return "ficarem bem cozidos";
-        return normalize(items[0]) === "carne" ? "ficar bem cozida" : "ficar bem cozido";
+        return /^carne(?:\s+moida)?$/.test(normalize(items[0])) ? "ficar bem cozida" : "ficar bem cozido";
       }
 
       function weeklySideEnding(items) {
@@ -481,10 +478,10 @@
       function weeklyPrep(ingredients) {
         const items = uniqueIngredients(ingredients);
         const meats = items.filter(item => ingredientCategory(item) === "protein");
-        const fish = meats.filter(item => normalize(item) === "peixe");
-        const chicken = meats.filter(item => normalize(item) === "frango");
-        const beef = meats.filter(item => normalize(item) === "carne");
         const eggs = meats.filter(item => /\bovo|ovos\b/.test(normalize(item)));
+        const fish = meats.filter(item => normalize(item) === "peixe");
+        const chicken = meats.filter(item => /\bfrango\b/.test(normalize(item)));
+        const beef = meats.filter(item => /^carne(?:\s+moida)?$/.test(normalize(item)));
         const otherMeats = meats.filter(item => !fish.includes(item) && !chicken.includes(item) && !beef.includes(item) && !eggs.includes(item));
         const sides = items.filter(item => ingredientCategory(item) !== "protein");
         const grains = sides.filter(weeklyIsGrain);
@@ -757,9 +754,36 @@
       }
 
       function snapshotWeeklyPlan(plan) {
-        return plan.map(item => Object.assign({}, item, {
+        const cleanPlan = window.BistroPetStorage?.normalizeWeeklyPlan
+          ? window.BistroPetStorage.normalizeWeeklyPlan(plan)
+          : plan;
+        return cleanPlan.map(item => Object.assign({}, item, {
           ingredients: Array.isArray(item.ingredients) ? [...item.ingredients] : []
         }));
+      }
+
+      function clearWeeklyPlanSnapshot() {
+        window.sessionStorage.removeItem(weeklyPlanSnapshotKey);
+      }
+
+      function readWeeklyPlanSnapshot() {
+        try {
+          const snapshot = JSON.parse(window.sessionStorage.getItem(weeklyPlanSnapshotKey) || "null");
+          if (!snapshot?.userId || !canRestoreWeeklyPlan(snapshot.plan)) {
+            clearWeeklyPlanSnapshot();
+            return null;
+          }
+          snapshot.plan = snapshotWeeklyPlan(snapshot.plan);
+          window.sessionStorage.setItem(weeklyPlanSnapshotKey, JSON.stringify(snapshot));
+          return snapshot;
+        } catch (error) {
+          clearWeeklyPlanSnapshot();
+          return null;
+        }
+      }
+
+      function sameWeeklyPlan(left, right) {
+        return JSON.stringify(left) === JSON.stringify(right);
       }
 
       function canRestoreWeeklyPlan(plan) {
@@ -909,6 +933,18 @@
         await window.BistroPetStorage.saveWeeklyPlan(currentPlan);
       }
 
+      const initialSnapshot = readWeeklyPlanSnapshot();
+      if (initialSnapshot) renderProfileWeeklyPlan(initialSnapshot.plan);
+
+      if (!await window.BistroPetStorage.ready()) {
+        clearWeeklyPlanSnapshot();
+        window.location.replace("./index.html");
+        return;
+      }
+      const currentUser = window.BistroPetStorage.getCurrentUser ? window.BistroPetStorage.getCurrentUser() : null;
+      const snapshotMatchesUser = Boolean(initialSnapshot && currentUser?.id === initialSnapshot.userId);
+      if (initialSnapshot && !snapshotMatchesUser) clearWeeklyPlanSnapshot();
+
       const savedProfile = window.BistroPetStorage.getPetProfile();
       refreshProfileCopy(savedProfile);
       const savedPlan = window.BistroPetStorage.getWeeklyPlan();
@@ -916,14 +952,17 @@
         document.getElementById("weeklyAuto").checked = true;
         activeWeeklyMode = "auto";
         weeklyPlanner.classList.remove("is-custom-mode");
-        renderProfileWeeklyPlan(savedPlan);
+        if (!snapshotMatchesUser || !sameWeeklyPlan(initialSnapshot.plan, savedPlan)) {
+          renderProfileWeeklyPlan(savedPlan);
+        }
       } else {
+        clearWeeklyPlanSnapshot();
         await clearWeeklyPlanState(Boolean(savedPlan));
         await updateModeState();
       }
       document.getElementById("weeklyAuto").addEventListener("change", () => updateModeState().catch(error => alert(error.message)));
 	      createWeekPlanButton.addEventListener("click", () => {
-	        const planIsOpen = weeklyPlanner.classList.contains("is-generated");
+	        const planIsOpen = typeof weeklyPlanner.classList.contains === "function" && weeklyPlanner.classList.contains("is-generated");
 	        const action = planIsOpen ? Promise.resolve(closeWeeklyPlanView()) : openWeeklyPlanView();
 	        action.catch(error => alert(error.message || "Não foi possível salvar o plano."));
 	      });
@@ -940,6 +979,7 @@
       confirmLogoutButton.addEventListener("click", async () => {
         try {
           confirmLogoutButton.disabled = true;
+          clearWeeklyPlanSnapshot();
           await window.BistroPetSupabase.signOut();
           window.location.replace("./index.html");
         } catch (error) {

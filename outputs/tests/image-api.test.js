@@ -352,12 +352,12 @@ test("handler allows up to seven weekly plan day images on demand", async () => 
   process.env.IMAGE_WEEKLY_LIMIT_WEEKLY_PLAN = "7";
 
   const weeklyDayRecipes = [
-    ["Frango", "Arroz", "Cenoura"],
+    ["Peito de frango", "Arroz", "Cenoura"],
     ["Peixe", "Batata", "Chuchu"],
     ["Carne", "Quinoa", "Abóbora"],
-    ["Peru", "Inhame", "Abobrinha"],
-    ["Ovos", "Aveia", "Pepino"],
-    ["Frango", "Mandioquinha", "Vagem"],
+    ["Fígado de frango", "Inhame", "Abobrinha"],
+    ["Fígado bovino", "Aveia", "Pepino"],
+    ["Carne moída", "Mandioquinha", "Vagem"],
     ["Peixe", "Arroz", "Beterraba"]
   ];
 
@@ -392,8 +392,8 @@ test("handler allows up to seven weekly plan day images on demand", async () => 
   const oversized = await callHandler({
     generationType: "weeklyPlan",
     recipes: [
-      { id: "1", ingredients: ["Frango"] },
-      { id: "2", ingredients: ["Peru"] }
+      { id: "1", ingredients: ["Peito de frango"] },
+      { id: "2", ingredients: ["Fígado bovino"] }
     ]
   });
   assert.equal(oversized.statusCode, 400);

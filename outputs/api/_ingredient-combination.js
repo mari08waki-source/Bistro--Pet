@@ -1,10 +1,12 @@
 const categoryRules = {
   protein: [
-    ["frango", ["frango", "galinha"]],
-    ["peixe", ["peixe", "tilapia", "salmao", "atum", "sardinha", "merluza", "bacalhau"]],
-    ["carne", ["carne", "patinho", "bovina", "bovino", "acem", "musculo", "alcatra", "coxao"]],
-    ["peru", ["peru"]],
-    ["ovo", ["ovo", "ovos"]]
+    ["peito de frango", ["peito de frango"]],
+    ["carne moida", ["carne moida"]],
+    ["figado de frango", ["figado de frango"]],
+    ["figado bovino", ["figado bovino"]],
+    ["ovo", ["ovo", "ovos"]],
+    ["peixe", ["peixe"]],
+    ["carne", ["carne"]]
   ],
   carbohydrate: [
     ["arroz", ["arroz"]],

@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const PROFILE_SCHEMA_VERSION = 3;
@@ -45,6 +45,63 @@
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   }
 
+  function normalizeProteinText(value) {
+    const chickenCut = "(?:peito|fil[eé]|coxa|sobrecoxa|asa|coxinha\\s+da\\s+asa|drumette|meio\\s+da\\s+asa)";
+    return String(value || "")
+      .replace(/f[ií]gado\s+(?:de\s+)?(?:boi|bovino)/gi, "__BISTROPET_FIGADO_BOVINO__")
+      .replace(/f[ií]gado\s+(?:de\s+)?(?:galinha|frango)/gi, "__BISTROPET_FIGADO_FRANGO__")
+      .replace(new RegExp(`\\b(?:(?:${chickenCut})(?:\\s+e\\s+${chickenCut})?\\s+de\\s+)*(?:frango|galinha)\\b`, "gi"), "Peito de frango")
+      .replace(/\b(?:patinho|m[uú]sculo|ac[eé]m|cox[aã]o\s+mole|cox[aã]o\s+duro|lagarto|fraldinha|picanha|alcatra)\b/gi, "Carne")
+      .replace(/\b(?:(?:fil[eé]|posta|lombo)\s+de\s+)*(?:peixe|til[aá]pia|merluza|salm[aã]o|sardinha|atum|bacalhau)\b/gi, "Peixe")
+      .replace(/__BISTROPET_FIGADO_BOVINO__/g, "Fígado bovino")
+      .replace(/__BISTROPET_FIGADO_FRANGO__/g, "Fígado de frango");
+  }
+
+  function normalizeProteinIngredients(items) {
+    return uniqueItems((Array.isArray(items) ? items : []).map(normalizeSavedIngredient).filter(Boolean));
+  }
+
+  function normalizeSavedIngredient(value) {
+    const original = String(value || "").trim();
+    const clean = normalize(original);
+    if (!clean) return "";
+    if (/\bovo(?:s)?\b/.test(clean)) return "Ovo";
+    if (/\b(?:peixe|file de peixe|posta de peixe|lombo de peixe|tilapia|merluza|salmao|sardinha|atum|bacalhau)\b/.test(clean)) return "Peixe";
+    if (/\bfigado\s+(?:de\s+)?(?:galinha|frango)\b/.test(clean)) return "Fígado de frango";
+    if (/\bfigado\s+(?:de\s+)?(?:boi|bovino)\b/.test(clean)) return "Fígado bovino";
+    if (/\b(?:frango|galinha|peito|coxa|sobrecoxa|asa|drumette)\b/.test(clean)) return "Peito de frango";
+    if (/\bcarne moida\b/.test(clean)) return "Carne moída";
+    if (/\b(?:carne|patinho|musculo|acem|coxao|lagarto|fraldinha|picanha|alcatra)\b/.test(clean)) return "Carne";
+    return original
+      .replace(/^\s*\d+(?:[.,]\d+)?\s*g(?:ramas?)?\s+de\s+/i, "")
+      .replace(/^\s*(?:\d+\s+)?\d+\/\d+\s+x[ií]cara(?:s)?\s+de\s+/i, "")
+      .replace(/^\s*\d+\s+/i, "")
+      .replace(/\s*\([^)]*\)\s*$/i, "")
+      .replace(/\s+(?:pequeno|pequena|m[eé]dio|m[eé]dia|grande|cozido|cozida|picado|picada|amassado|amassada)$/i, "")
+      .trim();
+  }
+
+  function normalizeRecipe(value) {
+    const recipe = value || {};
+    return {
+      ...recipe,
+      title: normalizeProteinText(recipe.title),
+      description: normalizeProteinText(recipe.description),
+      ingredients: normalizeProteinIngredients(recipe.ingredients),
+      steps: (Array.isArray(recipe.steps) ? recipe.steps : []).map(normalizeProteinText)
+    };
+  }
+
+  function normalizeWeeklyPlan(plan) {
+    return (Array.isArray(plan) ? plan : []).map(item => ({
+      ...item,
+      title: normalizeProteinText(item?.title),
+      ingredients: normalizeProteinIngredients(item?.ingredients),
+      prep: normalizeProteinText(item?.prep),
+      note: normalizeProteinText(item?.note)
+    }));
+  }
+
   function normalizeObservationText(value) {
     return String(value || "")
       .replace(/[\u200B-\u200D\u2060\uFEFF]+/g, "\n")
@@ -73,11 +130,11 @@
   const observationFoodAliases = {
     mandioquinha: "mandioquinha", beterraba: "beterraba", abobrinha: "abobrinha",
     mandioca: "mandioca", cenora: "cenoura", cenoura: "cenoura", batata: "batata",
-    frango: "frango", chuchu: "chuchu", carne: "carne", peixe: "peixe",
-    tilapia: "tilapia", salmao: "salmao", arroz: "arroz", milho: "milho",
+    frango: "peito de frango", chuchu: "chuchu", carne: "carne", peixe: "peixe",
+    arroz: "arroz", milho: "milho",
     inhame: "inhame", pepino: "pepino", vagem: "vagem", couve: "couve",
     selga: "selga", acelga: "acelga", quinoa: "quinoa", aveia: "aveia",
-    abobora: "abobora", peru: "peru", ovo: "ovo"
+    abobora: "abobora"
   };
 
   function splitKnownFoodWords(value) {
@@ -138,11 +195,11 @@
     if (!row) return null;
     return {
       _generationId: row.id,
-      title: row.title,
-      description: row.description,
+      title: normalizeProteinText(row.title),
+      description: normalizeProteinText(row.description),
       mode: row.recipe_type,
-      ingredients: Array.isArray(row.ingredients) ? row.ingredients : [],
-      steps: Array.isArray(row.steps) ? row.steps : [],
+      ingredients: normalizeProteinIngredients(row.ingredients),
+      steps: (Array.isArray(row.steps) ? row.steps : []).map(normalizeProteinText),
       image: row.image_url || "",
       requestId: row.request_id || "",
       createdAt: row.created_at
@@ -154,10 +211,10 @@
       historyId: row.id,
       historyKey: row.history_key,
       _generationId: row.recipe_generation_id || null,
-      title: row.title,
+      title: normalizeProteinText(row.title),
       mode: row.recipe_type,
-      ingredients: Array.isArray(row.ingredients) ? row.ingredients : [],
-      steps: Array.isArray(row.steps) ? row.steps : [],
+      ingredients: normalizeProteinIngredients(row.ingredients),
+      steps: (Array.isArray(row.steps) ? row.steps : []).map(normalizeProteinText),
       createdAt: row.created_at
     };
   }
@@ -213,10 +270,10 @@
       day: row.day_name,
       planMode: plan.plan_mode,
       planModeLabel: plan.plan_mode === "custom" ? "Personalizado" : "Automático",
-      title: row.title,
-      ingredients: Array.isArray(row.ingredients) ? row.ingredients : [],
-      prep: row.prep,
-      note: row.note,
+      title: normalizeProteinText(row.title),
+      ingredients: normalizeProteinIngredients(row.ingredients),
+      prep: normalizeProteinText(row.prep),
+      note: normalizeProteinText(row.note),
       customNote: "",
       image: row.image_url || "",
       profile: row.profile_snapshot || {}
@@ -386,14 +443,15 @@
     if (recipe.mode === "chef" && !usage.allowed && !recipe._generationId) {
       throw new Error(usage.message || "A sugestão do Chefe de hoje já foi criada para este pet.");
     }
+    const cleanRecipe = normalizeRecipe(recipe);
     const payload = {
       user_id: cache.user.id,
       pet_profile_id: cache.profileId,
       recipe_type: recipe.mode,
-      title: String(recipe.title || ""),
-      description: String(recipe.description || ""),
-      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-      steps: Array.isArray(recipe.steps) ? recipe.steps : [],
+      title: cleanRecipe.title,
+      description: cleanRecipe.description,
+      ingredients: cleanRecipe.ingredients,
+      steps: cleanRecipe.steps,
       image_url: recipe.image || null,
       request_id: recipe.requestId || null,
       updated_at: new Date().toISOString()
@@ -414,16 +472,17 @@
   async function addRecipeToHistory(recipe) {
     const client = await requireReady();
     if (!cache.profileId) throw new Error("Perfil do pet não encontrado.");
-    const historyKey = historyKeyForRecipe(recipe);
+    const cleanRecipe = normalizeRecipe(recipe);
+    const historyKey = historyKeyForRecipe(cleanRecipe);
     const payload = {
       user_id: cache.user.id,
       pet_profile_id: cache.profileId,
       recipe_generation_id: recipe._generationId || null,
       history_key: historyKey,
-      title: String(recipe.title || ""),
+      title: cleanRecipe.title,
       recipe_type: recipe.mode,
-      ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
-      steps: Array.isArray(recipe.steps) ? recipe.steps : []
+      ingredients: cleanRecipe.ingredients,
+      steps: cleanRecipe.steps
     };
     const { data, error } = await client
       .from("saved_recipes")
@@ -445,7 +504,8 @@
       return null;
     }
     if (!cache.profileId) throw new Error("Perfil do pet não encontrado.");
-    const planMode = plan[0]?.planMode === "custom" ? "custom" : "auto";
+    const cleanPlan = normalizeWeeklyPlan(plan);
+    const planMode = cleanPlan[0]?.planMode === "custom" ? "custom" : "auto";
     const { data: savedPlan, error: planError } = await client
       .from("weekly_plans")
       .insert({
@@ -457,7 +517,7 @@
       .select("id")
       .single();
     if (planError) throw planError;
-    const rows = plan.map((item, index) => ({
+    const rows = cleanPlan.map((item, index) => ({
       user_id: cache.user.id,
       weekly_plan_id: savedPlan.id,
       day_index: index,
@@ -471,7 +531,7 @@
     }));
     const { error: daysError } = await client.from("weekly_plan_days").insert(rows);
     if (daysError) throw daysError;
-    cache.weeklyPlan = plan.map((item, index) => ({ ...item, _planId: savedPlan.id, planMode }));
+    cache.weeklyPlan = cleanPlan.map((item, index) => ({ ...item, _planId: savedPlan.id, planMode }));
     return getWeeklyPlan();
   }
 
@@ -492,6 +552,8 @@
   }
 
   window.BistroPetStorage = {
+    normalizeProteinText,
+    normalizeWeeklyPlan,
     ready,
     refresh: () => ready(true),
     getCurrentUser,

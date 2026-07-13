@@ -1,6 +1,8 @@
 import { identifyImageClient } from "./_image-client.js";
 
 const dayNames = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const allowedProteins = ["peito de frango", "carne", "carne moida", "peixe", "ovo", "figado de frango", "figado bovino"];
+const forbiddenProteinTerms = /\b(frango|galinha|peito|coxa|sobrecoxa|asa|coxinha\s+da\s+asa|drumette|meio\s+da\s+asa|file|posta|lombo|peru|ovos|patinho|musculo|acem|coxao|lagarto|fraldinha|picanha|alcatra|bovina|bovino|tilapia|merluza|salmao|sardinha|atum|bacalhau)\b/;
 
 function sendJson(res, response, status = 200) {
   res.setHeader("Content-Type", "application/json");
@@ -21,6 +23,16 @@ function safeList(items) {
     ? items.map(item => String(item || "").trim()).filter(Boolean)
     : [];
 }
+
+function hasNonstandardProtein(value) {
+  let clean = normalize(value);
+  [...allowedProteins].sort((a, b) => b.length - a.length).forEach(item => {
+    clean = clean.replace(new RegExp(`\\b${item}\\b`, "g"), "");
+  });
+  return forbiddenProteinTerms.test(clean);
+}
+
+export { hasNonstandardProtein };
 
 function isRestrictedText(value, restrictions) {
   const cleanValue = normalize(value);
@@ -49,6 +61,9 @@ Regras:
 - Cada dia deve ter uma receita diferente.
 - Não repita a mesma combinação de ingredientes.
 - Use ingredientes simples, seguros e comuns.
+- As únicas proteínas permitidas são: Peito de frango, Carne, Carne moída, Peixe, Ovo, Fígado de frango e Fígado bovino.
+- Nunca use cortes bovinos, espécies de peixe, frango genérico, peru ou qualquer outra proteína fora dessa lista.
+- Repita exatamente os nomes permitidos na lista de ingredientes, no título e no modo de preparo.
 - Não use temperos perigosos, cebola, alho, uva, chocolate, ossos cozidos ou ingredientes proibidos.
 - Não invente dados do pet que não foram informados.
 - O modo de preparo deve ser claro e curto.
@@ -138,7 +153,9 @@ function normalizePlan(rawPlan, { profile, restrictions }) {
     const prep = String(item.prep || "").trim();
     const note = String(item.note || "").trim();
     if (!title || ingredients.length < 3 || !prep) throw new Error(`Plano incompleto para ${day}.`);
-    const restrictedContent = [title, prep, note, ...ingredients].some(value => isRestrictedText(value, restrictions));
+    const recipeContent = [title, prep, note, ...ingredients];
+    if (recipeContent.some(hasNonstandardProtein)) throw new Error(`Proteína fora da padronização para ${day}.`);
+    const restrictedContent = recipeContent.some(value => isRestrictedText(value, restrictions));
     if (restrictedContent) throw new Error(`Plano inseguro para ${day}.`);
     return {
       day,

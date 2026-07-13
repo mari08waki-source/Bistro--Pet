@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import weeklyPlanHandler, { hasNonstandardProtein } from "../api/generate-weekly-plan.js";
 import vm from "node:vm";
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
@@ -40,11 +41,11 @@ test("paid plan business rules are enforced in storage layer", () => {
   assert.match(storage, /\.eq\("recipe_type", "chef"\)[\s\S]*?\.gte\("created_at", startOfDayIso\(\)\)/);
   assert.match(storage, /\.eq\("recipe_type", "personalizada"\)[\s\S]*?\.gte\("created_at", startOfWeekIso\(\)\)/);
   assert.match(storage, /allowed: !data/);
-  assert.match(storage, /recipe\.mode === "personalizada" \? usage\.existingId : null/);
+  assert.match(storage, /\["personalizada", "chef"\]\.includes\(recipe\.mode\) \? usage\.existingId : null/);
   assert.match(storage, /customRecipeWeekly/);
   assert.match(storage, /\.gte\("created_at", historyCutoffIso\(\)\)/);
   assert.match(meal, /window\.BistroPetStorage\.recipeUsageStatus\(activeRecipeMode\)/);
-  assert.doesNotMatch(meal, /usage\.existingRecipe/);
+  assert.match(meal, /usage\?\.existingRecipe/);
   assert.doesNotMatch(meal, /chefImageRetry/);
   assert.match(meal, /showWarning\(activeRecipeMode, usage\.message/);
 });
@@ -73,8 +74,8 @@ test("weekly reload discards a saved plan that contains blocked mandioca", async
   const savedPlan = Array.from({ length: 7 }, (_, index) => ({
     day: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"][index],
     planMode: "custom",
-    title: index === 4 ? "Frango com mandioca e cenoura" : "Frango com arroz e cenoura",
-    ingredients: index === 4 ? ["Frango", "Mandioca", "Cenoura"] : ["Frango", "Arroz", "Cenoura"],
+    title: index === 4 ? "Peito de frango com mandioca e cenoura" : "Peito de frango com arroz e cenoura",
+    ingredients: index === 4 ? ["Peito de frango", "Mandioca", "Cenoura"] : ["Peito de frango", "Arroz", "Cenoura"],
     prep: "Teste.",
     image: "",
     profile: { name: "Luna" }
@@ -126,22 +127,31 @@ test("weekly reload discards a saved plan that contains blocked mandioca", async
   assert.ok(saveCalls.some(value => value === null));
 });
 
-test("weekly custom plan generation avoids blocked mandioca family", async () => {
+test("weekly custom plan generation avoids blocked mandioca ingredient", async () => {
   const weekly = read("session-4-weekly-plan.html");
   const script = weekly.match(/<script>\s*([\s\S]*?)\s*<\/script>\s*<script src="\.\/pwa\.js"><\/script>/)[1];
   const saveCalls = [];
+  const dayNames = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+  const safePlan = dayNames.map((day, index) => ({
+    day,
+    title: `Plano seguro ${index + 1}`,
+    ingredients: ["Peito de frango", "Arroz", "Cenoura"],
+    prep: "Cozinhe os ingredientes e sirva morno.",
+    note: "Plano validado."
+  }));
+  let weeklyPlanRequest = null;
   const elements = new Map();
   const element = id => {
     if (!elements.has(id)) {
       elements.set(id, {
         id,
-        checked: id === "weeklyCustom",
+        checked: id === "weeklyAuto",
         hidden: false,
         disabled: false,
         innerHTML: "",
         textContent: "",
         listeners: {},
-        classList: { add() {}, remove() {}, toggle() {} },
+        classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
         addEventListener(event, callback) { this.listeners[event] = callback; },
         querySelectorAll() { return []; },
         querySelector() { return element(`${id}:child`); },
@@ -159,7 +169,11 @@ test("weekly custom plan generation avoids blocked mandioca family", async () =>
   };
   const context = {
     document,
-    fetch: async () => ({ ok: false, json: async () => ({}) }),
+    fetch: async (url, options = {}) => {
+      assert.equal(String(url), "/api/generate-weekly-plan");
+      weeklyPlanRequest = JSON.parse(options.body || "{}");
+      return { ok: true, json: async () => ({ plan: safePlan }) };
+    },
     alert(message) { throw new Error(String(message)); },
     window: {
       location: { protocol: "https:", replace(value) { this.replaced = value; } },
@@ -180,11 +194,134 @@ test("weekly custom plan generation avoids blocked mandioca family", async () =>
   context.window.document = document;
   vm.runInNewContext(script, context);
   await new Promise(resolve => setTimeout(resolve, 25));
-  await element("createWeekPlan").listeners.click();
+  element("createWeekPlan").listeners.click();
+  await new Promise(resolve => setTimeout(resolve, 25));
+  assert.deepEqual(weeklyPlanRequest.restrictions, ["mandioca"]);
   const generatedPlan = saveCalls.find(value => Array.isArray(value) && value.length === 7);
   assert.ok(generatedPlan);
   const allIngredients = generatedPlan.flatMap(item => item.ingredients || []).map(item => String(item).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
-  assert.ok(!allIngredients.some(item => /\b(mandioca|aipim|macaxeira)\b/.test(item)));
+  assert.ok(!allIngredients.some(item => /\bmandioca\b/.test(item)));
+
+  const originalFetch = globalThis.fetch;
+  const originalEnv = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY
+  };
+  let acceptedRestrictedMandioca = false;
+  try {
+    process.env.SUPABASE_URL = "https://bistropet.supabase.co";
+    process.env.SUPABASE_ANON_KEY = "public-anon-key";
+    process.env.GEMINI_API_KEY = "fake-gemini-key";
+    const unsafePlan = dayNames.map((day, index) => ({
+      day,
+      title: index === 0 ? "Peito de frango com mandioca" : `Plano seguro ${index + 1}`,
+      ingredients: index === 0 ? ["Peito de frango", "Mandioca", "Cenoura"] : ["Peito de frango", "Arroz", "Cenoura"],
+      prep: "Cozinhe os ingredientes e sirva morno.",
+      note: "Plano validado."
+    }));
+    globalThis.fetch = async url => {
+      if (String(url).includes("/auth/v1/user")) {
+        return { ok: true, json: async () => ({ id: "weekly-user-id" }) };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: JSON.stringify({ plan: unsafePlan }) }] } }]
+        })
+      };
+    };
+    const response = {
+      statusCode: 200,
+      body: null,
+      setHeader() {},
+      status(code) { this.statusCode = code; return this; },
+      json(body) { this.body = body; return this; }
+    };
+    await weeklyPlanHandler({
+      method: "POST",
+      headers: { authorization: "Bearer valid-token" },
+      body: { profile: { name: "Luna" }, restrictions: ["mandioca"] }
+    }, response);
+    acceptedRestrictedMandioca = response.statusCode === 200;
+  } finally {
+    globalThis.fetch = originalFetch;
+    Object.entries(originalEnv).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
+  }
+  assert.equal(acceptedRestrictedMandioca, false);
+});
+
+test("protein names are standardized across every active recipe flow", () => {
+  const meal = read("session-3-meal.html");
+  const weekly = read("session-4-weekly-plan.html");
+  const weeklyApi = read("api/generate-weekly-plan.js");
+  const imageCombination = read("api/_ingredient-combination.js");
+  const allowed = ["Peito de frango", "Carne", "Carne moída", "Peixe", "Ovo", "Fígado de frango", "Fígado bovino"];
+  allowed.forEach(name => {
+    assert.match(`${meal}\n${weekly}\n${weeklyApi}`, new RegExp(name));
+  });
+  assert.match(weeklyApi, /hasNonstandardProtein/);
+  assert.match(weeklyApi, /forbiddenProteinTerms/);
+  assert.doesNotMatch(imageCombination, /patinho|musculo|acem|coxao|tilapia|merluza|salmao|sardinha|atum|bacalhau/);
+  assert.match(read("service-worker.js"), /v14-20260711/);
+});
+
+test("protein normalization is idempotent and repairs legacy persisted names", () => {
+  const context = { window: { addEventListener() {} } };
+  vm.runInNewContext(read("bistropet-storage.js"), context);
+  const normalizeProteinText = context.window.BistroPetStorage.normalizeProteinText;
+  const cases = new Map([
+    ["Peito de peito de frango", "Peito de frango"],
+    ["Coxa e sobrecoxa de peito de frango", "Peito de frango"],
+    ["Asa de frango", "Peito de frango"],
+    ["Filé de peixe", "Peixe"],
+    ["Fígado de frango", "Fígado de frango"]
+  ]);
+  cases.forEach((expected, legacy) => {
+    const once = normalizeProteinText(legacy);
+    assert.equal(once, expected);
+    assert.equal(normalizeProteinText(once), once);
+    assert.equal(normalizeProteinText(normalizeProteinText(once)), once);
+  });
+
+  const normalizedPlan = context.window.BistroPetStorage.normalizeWeeklyPlan([{
+    title: "Coxa e sobrecoxa de peito de frango com arroz",
+    ingredients: ["Filé de peixe", "Asa de frango"],
+    prep: "Cozinhe o filé de peixe.",
+    note: "Sem sobrecoxa de frango."
+  }]);
+  assert.equal(normalizedPlan[0].title, "Peito de frango com arroz");
+  assert.deepEqual([...normalizedPlan[0].ingredients], ["Peixe", "Peito de frango"]);
+  assert.equal(normalizedPlan[0].prep, "Cozinhe o Peixe.");
+  assert.equal(normalizedPlan[0].note, "Sem Peito de frango.");
+
+  const deduplicatedPlan = context.window.BistroPetStorage.normalizeWeeklyPlan([{
+    ingredients: ["200g de Peixe ou Peixe (cozido e desfiado)", "Peixe", "peixe"]
+  }]);
+  assert.deepEqual([...deduplicatedPlan[0].ingredients], ["Peixe"]);
+
+  const legacyPlan = context.window.BistroPetStorage.normalizeWeeklyPlan([{
+    ingredients: ["2 ovos grandes (mexidos)", "100g de Peito de frango (cozido e desfiado)", "1/2 xícara de espinafre (picado)"]
+  }]);
+  assert.deepEqual([...legacyPlan[0].ingredients], ["Ovo", "Peito de frango", "espinafre"]);
+});
+
+test("weekly API rejects forbidden chicken cuts and generic fish fillets", () => {
+  [
+    "Coxa de frango",
+    "Peito de peito de frango",
+    "Coxa e sobrecoxa de peito de frango",
+    "Asa de frango",
+    "Coxinha da asa de frango",
+    "Filé de peixe",
+    "Posta de peixe"
+  ].forEach(value => assert.equal(hasNonstandardProtein(value), true, value));
+  ["Peito de frango", "Peixe", "Ovo", "Fígado de frango"].forEach(value => {
+    assert.equal(hasNonstandardProtein(value), false, value);
+  });
 });
 
 test("authentication implements signup, login, recovery and session isolation", () => {
